@@ -1,0 +1,45 @@
+{
+  "name": "wy-music",
+  "private": true,
+  "version": "0.3.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.6.0",
+    "@types/node": "^24.0.12",
+    "@unocss/reset": "^66.3.3",
+    "@vueuse/core": "^13.5.0",
+    "NeteaseCloudMusicApi": "^4.27.0",
+    "dayjs": "^1.11.13",
+    "lodash-es": "^4.17.21",
+    "pinia": "^3.0.3",
+    "pinia-plugin-persistedstate": "^4.4.1",
+    "rgbaster": "^2.1.1",
+    "vue": "^3.5.17"
+  },
+  "devDependencies": {
+    "@iconify-json/eos-icons": "^1.2.2",
+    "@iconify-json/flat-color-icons": "^1.2.1",
+    "@iconify-json/iconoir": "^1.2.7",
+    "@iconify-json/majesticons": "^1.2.2",
+    "@iconify-json/material-symbols": "^1.2.29",
+    "@iconify-json/mdi": "^1.2.3",
+    "@iconify-json/solar": "^1.2.2",
+    "@tauri-apps/cli": "^2.6.2",
+    "@types/lodash-es": "^4.17.12",
+    "@unocss/preset-attributify": "^66.3.3",
+    "@unocss/transformer-attributify-jsx": "^66.3.3",
+    "@vitejs/plugin-vue": "^6.0.0",
+    "@vitejs/plugin-vue-jsx": "^5.0.1",
+    "naive-ui": "^2.42.0",
+    "typescript": "^5.8.3",
+    "unocss": "^66.3.3",
+    "vite": "^7.0.3",
+    "vue-tsc": "^3.0.1"
+  }
+}
