@@ -3801,20 +3801,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tauri-app"
-version = "0.3.0"
-dependencies = [
- "dirs",
- "mp3-metadata",
- "reqwest",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-opener",
-]
-
-[[package]]
 name = "tauri-build"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5132,6 +5118,20 @@ dependencies = [
  "windows-core",
  "windows-version",
  "x11-dl",
+]
+
+[[package]]
+name = "wy-music"
+version = "0.3.1"
+dependencies = [
+ "dirs",
+ "mp3-metadata",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-opener",
 ]
 
 [[package]]
