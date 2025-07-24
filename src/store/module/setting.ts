@@ -37,7 +37,7 @@ export const useSettingStore = defineStore("setting", {
     return {
       focused: true,
       triggerTime: 4500,
-      color: "#000000",
+      color: "#0000",
       showBottomPanel: null,
       localAudioDir: "",
       apiAudioUrl: import.meta.env.VITE_API_AUDIO_URL,

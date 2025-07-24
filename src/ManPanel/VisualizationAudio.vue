@@ -5,15 +5,29 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue';
 import { useSongStore } from "@/store/module/song";
+import { useSettingStore } from "@/store/module/setting";
 
 const songStore = useSongStore();
+const settingStore = useSettingStore();
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 let audioContext: AudioContext | null = null;
 let analyser: AnalyserNode | null = null;
 let animationId: number | null = null;
 let cleanup: (() => void) | undefined = undefined;
+
+// 条纹底部色
+const stripeBottomColor = computed(() => {
+  const [r, g, b] = settingStore.color.match(/\d+/g)!.map(Number);
+  return `rgba(${r}, ${g}, ${b}, 0.3)`
+})
+// 条纹顶部色
+const stripeTopColor = computed(() => {
+  const [r, g, b] = settingStore.color.match(/\d+/g)!.map(Number);
+  // 顶部颜色取反
+  return `rgba(${255 - r}, ${255 - g}, ${255 - b}, 1)`
+})
 
 // 初始化音频分析器
 const initAudioAnalyser = () => {
@@ -67,8 +81,8 @@ const drawVisualization = () => {
 
       // 创建渐变颜色
       const gradient = ctx.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
-      gradient.addColorStop(0, '#4F46E5'); // 顶部颜色
-      gradient.addColorStop(1, '#818CF8'); // 底部颜色
+      gradient.addColorStop(0, stripeTopColor.value); // 顶部颜色
+      gradient.addColorStop(1, stripeBottomColor.value); // 底部颜色
 
       ctx.fillStyle = gradient;
       ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
