@@ -19,11 +19,13 @@ let cleanup: (() => void) | undefined = undefined;
 
 // 条纹底部色
 const stripeBottomColor = computed(() => {
+  if (!settingStore.color) return '#000000'
   const [r, g, b] = settingStore.color.match(/\d+/g)!.map(Number);
   return `rgba(${r}, ${g}, ${b}, 0.3)`
 })
 // 条纹顶部色
 const stripeTopColor = computed(() => {
+  if (!settingStore.color) return '#000000'
   const [r, g, b] = settingStore.color.match(/\d+/g)!.map(Number);
   // 顶部颜色取反
   return `rgba(${255 - r}, ${255 - g}, ${255 - b}, 1)`
