@@ -133,19 +133,41 @@ async fn get_local_songs() -> Vec<SongInfo> {
 
 /** 根据 path 获取 name singer picUrl dt */
 async fn get_song_info(path: String) -> Result<SongInfo, String> {
-    let file_name = path.split('/').last().unwrap();
-    let id = file_name.split('-').last().unwrap().split('.').next().unwrap().to_string();
-    let name = file_name.split('-').nth(0).unwrap().to_string();
-    let singer = file_name.split('-').nth(1).unwrap()
+    // 使用 Path 处理跨平台路径分隔符
+    let path = std::path::Path::new(&path);
+    let file_name = path.file_name()
+        .and_then(|os_str| os_str.to_str())
+        .ok_or_else(|| "无法解析文件名".to_string())?;
+
+    // 分割文件名获取各部分信息（格式：[歌名]-[歌手]-[ID].mp3）
+    let parts: Vec<&str> = file_name.split('-').collect();
+    if parts.len() < 3 {
+        return Err(format!("文件名格式不正确: {}", file_name));
+    }
+
+    // 解析ID（最后一部分的前缀）
+    let id_part = parts.last().ok_or("无法获取ID部分")?;
+    let id = id_part.split('.').next()
+        .ok_or_else(|| format!("无法解析ID: {}", id_part))?;
+
+    // 解析歌曲名和歌手
+    let name = parts[0].to_string();
+    let singer = parts[1..parts.len()-1].join("-")  // 处理歌手名中可能包含的 '-' 字符
         .split_whitespace()
         .map(|s| s.trim().to_string())
         .collect::<Vec<String>>();
-    let dt = get_mp3_duration(&path).await?;
+
+    // 获取MP3时长
+    let dt = get_mp3_duration(&path.to_string_lossy()).await?;
+
+    // 构建图片URL路径（使用原文件所在目录）
+    let pic_url = file_name.replace(".mp3", ".jpg");
+
     Ok(SongInfo {
-        id,
+        id: id.to_string(),
         name,
         singer,
-        pic_url: file_name.replace(".mp3", ".jpg"),
+        pic_url,
         dt,
     })
 }
