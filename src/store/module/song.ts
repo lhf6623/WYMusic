@@ -97,6 +97,7 @@ export const useSongStore = defineStore("song", {
       }
       this.src = null;
       this.audio.currentTime = 0;
+      this.audio.crossOrigin = "anonymous";
       this.currentTime = 0;
       this.isPlaying = false;
       this.audio.volume = this.volume;
