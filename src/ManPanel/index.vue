@@ -1,6 +1,6 @@
 <template>
-  <div h-330px w-330px relative>
-    <header line-height-40px overflow-hidden w-full z-100 absolute top-0 left-0 font-300 text="sm center" select-none
+  <div h-330px w-330px relative overflow-hidden>
+    <header line-height-40px overflow-hidden w-full z-200 absolute top-0 left-0 font-300 text="sm center" select-none
       bg="#edebeb" data-tauri-drag-region transition-all :style="{
         height: settingStore.focused ? '40px' : '0px',
       }">
@@ -21,19 +21,22 @@
         </NButton>
       </div>
     </header>
-    <div h330px relative overflow-hidden w-full absolute inset-0 z-50 flex items-center justify-center>
-      <!-- 展示歌词 -->
-      <LyricPanel v-if="settingStore.showLyric" z-30></LyricPanel>
-      <!-- 展示歌曲专辑封面 -->
-      <NImage width="330px" height="330px" absolute preview-disabled :src="pic_url">
+    <!-- 展示歌曲专辑封面 -->
+    <div h330px w330px overflow-hidden absolute inset-0 z-50 flex-center>
+      <NImage width="330px" height="330px" preview-disabled :src="pic_url">
         <template #error>
           <i w130px h130px animate-spin i-mdi:image-filter-hdr-outline></i>
         </template>
       </NImage>
-      <div absolute bottom-0px left-0 wfull z-20 v-if="settingStore.showAudioVisualization"
-        :class="{ 'bottom-50px': settingStore.focused }">
-        <VisualizationAudio></VisualizationAudio>
-      </div>
+    </div>
+    <!-- 展示歌词 -->
+    <div h330px overflow-hidden w-full absolute inset-0 z-100 flex-center v-if="settingStore.showLyric">
+      <LyricPanel z-30></LyricPanel>
+    </div>
+    <!-- 展示音频可视化 -->
+    <div absolute bottom-0px left-0 wfull z-60 v-if="settingStore.showAudioVisualization"
+      :class="{ 'bottom-70px': settingStore.focused }">
+      <VisualizationAudio></VisualizationAudio>
     </div>
     <Control></Control>
   </div>
@@ -74,7 +77,6 @@ const get_pic_url = async () => {
   if (songStore.song) {
     url = songStore.isLocal(songStore.song) ? await settingStore.getWebviewFilePath(songStore.song.picUrl) : songStore.song.picUrl ?? ''
   }
-  // 获取图片的主要颜色
   url && settingStore.setMainColor(url)
   pic_url.value = url;
 }
@@ -85,6 +87,8 @@ onMounted(get_pic_url)
 const app = getCurrentWindow();
 
 app.onFocusChanged((focused) => {
+  // settingStore.focused = true;
+  // return
   settingStore.focused = focused.payload;
   if (!focused.payload) {
     settingStore.showBottomPanel = null

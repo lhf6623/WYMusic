@@ -1,7 +1,7 @@
 <template>
-  <footer flex flex-col justify-center w-full select-none absolute overflow-hidden bottom-0 z-50 transition-all
+  <footer flex flex-col justify-center w-full select-none absolute overflow-hidden bottom-0 z-200 transition-all
     bg="#edebeb" :style="{
-      height: settingStore.focused ? '50px' : '0px',
+      height: settingStore.focused ? '70px' : '0px',
     }">
     <!-- 控制 -->
     <div h-35px min-h-35px relative>
@@ -26,14 +26,16 @@
           </template>
         </NButton>
       </div>
-      <div text-red-600 w-full h-full flex-center>
+      <div text-red-600 w-full h-full flex-center gap-8px>
         <NButton text color="#dc2626" @click="playPrev">
           <template #icon>
             <i origin-center rotate-180 i-mdi:skip-forward></i>
           </template>
         </NButton>
-        <NButton text color="#dc2626" @click="fn">
-          <i mx-12px text-3xl :class="!songStore.isPlaying ? 'i-mdi:play' : 'i-mdi:pause'"></i>
+        <NButton circle color="#dc2626" @click="fn" mx-12px>
+          <template #icon>
+            <i :class="!songStore.isPlaying ? 'i-mdi:play' : 'i-mdi:pause'"></i>
+          </template>
         </NButton>
         <NButton text color="#dc2626" @click="playNext">
           <template #icon>
@@ -48,7 +50,7 @@
           </template>
         </NButton>
 
-        <NButton text @click="settingStore.showAudioView">纹</NButton>
+        <NButton text @click="settingStore.showAudioView">频</NButton>
         <NButton text @click="settingStore.showLyric = !settingStore.showLyric">词</NButton>
         <NPopover :on-update:show="updateShow" :show-arrow="false" scrollable ref="popoverRef"
           style="height: 100px; width: 20px; padding: 0"
@@ -69,7 +71,7 @@
       </div>
     </div>
     <!-- 歌曲播放条 -->
-    <div h-15px min-h-15px flex justify-center overflow-hidden v-if="songStore.song">
+    <div h-25px min-h-25px flex justify-center overflow-hidden v-if="songStore.song">
       <div px-6px w-full flex-center text-xs text-gray-500>
         <span inline-block mr-1>{{ numToTime(songStore.timer * 1000) }}</span>
         <NSlider :tooltip="false" :default-value="33" :theme-overrides="sliderThemeOverrides" :step="1"
@@ -149,8 +151,8 @@ function showBottomPanel(value: 'song_list' | 'setting') {
 const sliderThemeOverrides: SliderThemeOverrides = {
   fillColor: "rgb(220 38 38 / 1)",
   fillColorHover: "rgb(220 38 38 / 1)",
-  railHeight: "2px",
-  handleSize: "8px",
+  railHeight: "4px",
+  handleSize: "12px",
   handleColor: "rgb(220 38 38 / 1)",
 };
 

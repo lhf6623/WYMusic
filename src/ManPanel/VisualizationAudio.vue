@@ -90,6 +90,7 @@ const drawVisualization = () => {
       x += barWidth + 2; // 条纹间距
     }
   };
+
   renderFrame();
   // 清理函数
   return () => {
@@ -101,6 +102,10 @@ const drawVisualization = () => {
       Howler.masterGain.disconnect();
       gainNode.disconnect();
       Howler.masterGain.connect(Howler.ctx.destination);
+    }
+    /** 清空画布中的内容 */
+    if (ctx) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
   };
 };

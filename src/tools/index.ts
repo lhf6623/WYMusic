@@ -1,3 +1,5 @@
+import analyze from "rgbaster";
+
 export function getSongName(song: SongType) {
   const { name, singer, id } = song;
   const _singer = singer.join(" ");
@@ -18,24 +20,36 @@ export function numToTime(num?: number) {
   return `${hour > 0 ? _h + ":" : ""}${_m}:${_s}`;
 }
 
-/**
- * 切割图片
- */
-export function getImgRegion(imgUrl: string): Promise<string> {
+/** 获取区域图片主颜色 */
+export async function getImgColor(
+  imgUrl: string,
+  imgRegion?: { x: number; y: number; width: number; height: number }
+): Promise<string> {
   if (!imgUrl) return Promise.reject("请传入图片链接");
-  return new Promise((resolve, reject) => {
+  const img = await new Promise((resolve, reject) => {
     const image = new Image();
     image.crossOrigin = "";
     image.src = imgUrl;
     image.onload = () => {
       const canvas = document.createElement("canvas");
-      canvas.width = image.width;
-      canvas.height = image.height;
+      canvas.width = imgRegion?.width || image.width;
+      canvas.height = imgRegion?.height || image.height;
       const ctx = canvas.getContext("2d");
 
-      ctx?.drawImage(image, 0, 0, canvas.width, canvas.height);
+      ctx?.drawImage(
+        image,
+        imgRegion?.x || 0,
+        imgRegion?.y || 0,
+        canvas.width,
+        canvas.height
+      );
 
-      const imageData = ctx!.getImageData(0, 0, image.width, image.height);
+      const imageData = ctx!.getImageData(
+        imgRegion?.x || 0,
+        imgRegion?.y || 0,
+        canvas.width,
+        canvas.height
+      );
 
       // 保存图片
       const sliceCanvas = document.createElement("canvas");
@@ -50,5 +64,10 @@ export function getImgRegion(imgUrl: string): Promise<string> {
     image.onerror = () => {
       reject("图片加载失败");
     };
+  });
+  return await analyze(img).then((res: [{ color: string }]) => {
+    const [imgObj] = res;
+
+    return imgObj?.color;
   });
 }

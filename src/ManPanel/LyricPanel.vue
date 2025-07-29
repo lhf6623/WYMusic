@@ -1,20 +1,24 @@
 <template>
-  <div max-h-130px wfull flex-center flex-col text-18px class="lyric-panel">
-    <p v-for="(text, index) in lyric_text" :key="index" text-center mb-1>{{ text || '~~' }}</p>
+  <div ref="lyricPanel" max-h-130px wfull flex-center flex-col text-18px class="lyric-panel">
+    <p v-for="(text, index) in lyric_text" :key="index" text-center pb-1>{{ text || '~~' }}</p>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, computed } from 'vue';
+import { ref, watch, onMounted, computed, useTemplateRef } from 'vue';
 import { useSongStore } from "@/store/module/song";
 import { useSettingStore } from "@/store/module/setting";
+import { getImgColor } from "@/tools";
 
 const songStore = useSongStore();
 const settingStore = useSettingStore();
 const lyric_all_text = ref<{ time: number, text: string }[]>([]);
+const color = ref('rgb(255, 255, 255)')
+const lyricPanel = useTemplateRef('lyricPanel')
 
 // 处理歌词
-function handleLyric(text: string) {
+function get_lyric_text(text: string) {
+
   lyric_all_text.value = text.split('\n').filter(Boolean).map(item => {
     return {
       time: timeToSeconds(item),
@@ -42,11 +46,33 @@ const lyric_text = computed(() => {
   })
 })
 
-onMounted(() => {
-  handleLyric(songStore.lyric)
+async function get_color() {
+  if (!lyric_all_text.value.length) return;
+  if (!songStore.song?.picUrl) return
+
+  const rect = lyricPanel.value!.getBoundingClientRect()
+  const url = songStore.isLocal(songStore.song) ? await settingStore.getWebviewFilePath(songStore.song.picUrl) : songStore.song.picUrl
+
+  const _color = await getImgColor(url, {
+    width: rect.width,
+    height: rect.height,
+    x: rect.x,
+    y: rect.y
+  });
+  if (_color) {
+    color.value = _color
+  }
+}
+
+onMounted(async () => {
+  get_lyric_text(songStore.lyric)
+  get_color()
 })
 
-watch(() => songStore.lyric, handleLyric)
+watch(() => songStore.lyric, () => {
+  get_lyric_text(songStore.lyric)
+  get_color()
+})
 
 function timeToSeconds(timeString: string) {
 
@@ -62,15 +88,14 @@ function timeToSeconds(timeString: string) {
 }
 
 const text_color = computed(() => {
-  const [r, g, b] = settingStore.color.match(/\d+/g)!.map(Number);
+  const [r, g, b] = color.value.match(/\d+/g)!.map(Number);
   return `rgba(${255 - r}, ${255 - g}, ${255 - b}, 1)`
 })
 
 const text_shadow_color = computed(() => {
-  const [r, g, b] = settingStore.color.match(/\d+/g)!.map(Number);
+  const [r, g, b] = color.value.match(/\d+/g)!.map(Number);
   return `0 0 3px rgba(${r}, ${g}, ${b}, 1)`
 })
-
 </script>
 
 <style scoped>

@@ -1,7 +1,6 @@
 import { defineStore } from "pinia";
 import { versionKey } from "..";
-import { getImgRegion } from "@/tools";
-import analyze from "rgbaster";
+import { getImgColor } from "@/tools";
 
 import { join, audioDir } from "@tauri-apps/api/path";
 import { convertFileSrc } from "@tauri-apps/api/core";
@@ -73,11 +72,8 @@ export const useSettingStore = defineStore("setting", {
     /** 获取主色调 */
     setMainColor(url: string) {
       // 耗时任务，不要同步代码
-      getImgRegion(url).then((img) => {
-        analyze(img).then((res: [{ color: string }]) => {
-          const [imgObj] = res;
-          this.color = imgObj.color;
-        });
+      getImgColor(url).then((_color) => {
+        this.color = _color ?? "rgb(255, 255, 255)";
       });
     },
   },

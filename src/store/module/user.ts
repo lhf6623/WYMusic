@@ -10,7 +10,7 @@ import {
 
 export interface UserStore {
   /** 二维码登入定时器 */
-  qrTim: NodeJS.Timeout | null;
+  qrTim: number | null;
   /** 扫码登入 =》 二维码的key */
   qrKey?: string;
   /** 扫码登入 =》 二维码 */
@@ -78,7 +78,6 @@ export interface UserStore {
   /** 刷新二维码的 controller */
   controller: AbortController | null;
 }
-
 export const useUserStore = defineStore("user", {
   persist: {
     key: versionKey("user"),
