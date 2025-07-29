@@ -4,16 +4,16 @@
       <NTabPane name="play_list" tab="播放" display-directive="show:lazy">
         <SongList :list="songStore.playList" :loaging="loaging" type="play_list" @clear="clearList"></SongList>
       </NTabPane>
-      <NTabPane v-if="settingStore.apiAudioUrl" name="daily" tab="每日" display-directive="show:lazy">
+      <NTabPane v-if="settingStore.testApiAudioUrl" name="daily" tab="每日" display-directive="show:lazy">
         <SongList :list="dailyList" :loaging="loaging" type="daily" @playAll="playAll"></SongList>
       </NTabPane>
       <NTabPane v-if="songStore.localList.length" name="download" tab="本地" display-directive="show:lazy">
         <SongList :list="songStore.localList" :loaging="loaging" type="download" @playAll="playAll"></SongList>
       </NTabPane>
-      <NTabPane v-if="isLogin" name="like" tab="喜欢" display-directive="show:lazy">
+      <NTabPane v-if="isLogin && settingStore.testApiAudioUrl" name="like" tab="喜欢" display-directive="show:lazy">
         <SongList :list="songStore.likeList" :loaging="loaging" type="like" @playAll="playAll"></SongList>
       </NTabPane>
-      <NTabPane v-if="settingStore.apiAudioUrl" name="search" tab="搜索" display-directive="show:lazy">
+      <NTabPane v-if="settingStore.testApiAudioUrl" name="search" tab="搜索" display-directive="show:lazy">
         <SongList :list="searchList" :loaging="loaging" type="search" @search="handleSearch"></SongList>
       </NTabPane>
     </NTabs>
@@ -23,7 +23,6 @@
 </template>
 
 <script setup lang="tsx">
-import { NTabs, NTabPane } from "naive-ui";
 import { getRecommendSongs } from "@/tools/api_songs";
 import { computed, provide, reactive, ref, watch } from "vue";
 import { useSongStore } from "@/store/module/song";
@@ -161,6 +160,13 @@ const isLogin = computed(() => {
   return !!userStore.cookie;
 });
 
+watch(() => settingStore.testApiAudioUrl, (val) => {
+  if (!val) {
+    handleTabChange('download')
+    songStore.likeList = []
+    searchList.value = []
+  }
+})
 async function handleTabChange(value: TabsType) {
   menuOperate.add_play_list = true;
   menuOperate.remove_play_list = false;

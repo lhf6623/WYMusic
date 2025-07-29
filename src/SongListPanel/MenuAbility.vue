@@ -5,7 +5,7 @@
 </template>
 
 <script setup lang="ts">
-import { NDropdown, DropdownOption } from 'naive-ui'
+import { DropdownOption } from 'naive-ui'
 import { computed, inject } from 'vue';
 import { useSongStore } from "@/store/module/song"
 

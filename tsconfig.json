@@ -26,8 +26,15 @@
     "paths": {
       "@/*": ["src/*"],
       "@c/*": ["src/components/common/*"]
-    }
+    },
+    "types": ["naive-ui/volar"]
   },
-  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"],
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.d.ts",
+    "src/**/*.tsx",
+    "src/**/*.vue",
+    "src/components.d.ts"
+  ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

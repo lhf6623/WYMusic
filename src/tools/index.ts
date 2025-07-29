@@ -6,7 +6,7 @@ export function getSongName(song: SongType) {
 }
 
 export function numToTime(num?: number) {
-  if (!num) return "";
+  if (!num && num !== 0) return "";
   const hour = Math.floor(num / 1000 / 60 / 60) | 0;
   const minute = Math.floor(num / 1000 / 60) | 0;
   const second = Math.floor(num / 1000) % 60 | 0;

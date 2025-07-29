@@ -14,42 +14,39 @@ import {
 import { versionKey } from "..";
 import dayjs from "dayjs";
 import { getSongName } from "@/tools";
-import { throttle } from "lodash-es";
 import { useSettingStore } from "./setting";
+import { Howl } from "howler";
 
 export interface SongStore {
-  /** 请求时间 */
+  /** 请求时间,避免刷新后重复请求 */
   date: string | null;
-  /** 下载在本地的歌曲列表 */
   localList: SongType[];
-  /** 喜欢列表 */
   likeList: SongType[];
-  /** 播放列表 */
   playList: SongType[];
+  /** 下载中 id 列表，主要做请求中状态展示 */
+  downloadList: (string | number)[];
   /** 播放声音大小 */
   volume: number;
   /** 播放状态 */
   isPlaying: boolean;
-  /** 播放进度 */
-  currentTime: number;
-  /** Audio 实例 */
-  audio: HTMLAudioElement | null;
-  /** 展示歌词 */
-  showLyric: boolean;
-  controller: AbortController | null;
-  /** 播放地址 */
-  src: string | null;
+  /** 播放进度 秒 有小数位 */
+  timer: number;
   /** 歌词 */
   lyric: string;
   /** 当前播放歌曲信息 */
   song: SongType | null;
-  /** 下载中 id 列表 */
-  downloadList: (string | number)[];
+  /** 当前播放的 howl */
+  howl: Howl | null;
+  /** 所有的 howl 列表 TODO: 应该维护十个 */
+  howl_arr: {
+    id: string | number;
+    howl: Howl;
+  }[];
 }
 export const useSongStore = defineStore("song", {
   persist: {
     key: versionKey("song"),
-    omit: ["audio", "controller"],
+    omit: ["howl", "howl_arr"],
   },
   state: (): SongStore => {
     return {
@@ -60,156 +57,121 @@ export const useSongStore = defineStore("song", {
       downloadList: [],
       volume: 0.33,
       isPlaying: false,
-      currentTime: 0,
-      audio: null,
-      showLyric: true,
-      controller: null,
-      src: null,
+      timer: 0,
       lyric: "",
       song: null,
+      howl: null,
+      howl_arr: [],
     };
   },
   actions: {
-    initAudio() {
-      if (this.audio || this.controller) {
-        this.controller && this.controller.abort();
-      }
-      this.audio = new Audio();
-      window.$audio = this.audio;
-      this.controller = new AbortController();
-      this.setupEventListeners();
-      this.initPlayState();
+    stop() {
+      this.howl_arr.forEach((item) => {
+        item.howl.stop();
+      });
     },
-    destroy() {
-      if (this.audio) {
-        this.audio.pause();
-      }
-      this.controller && this.controller.abort();
-      this.audio = null;
-      window.$audio = null;
-      this.controller = null;
-    },
-    /** 初始化播放状态 */
-    initPlayState() {
-      if (!this.audio) return;
-      if (!this.audio.paused) {
-        this.audio.pause();
-      }
-      this.src = null;
-      this.audio.currentTime = 0;
-      this.audio.crossOrigin = "anonymous";
-      this.currentTime = 0;
-      this.isPlaying = false;
-      this.audio.volume = this.volume;
-    },
+    /** 暂停 */
     pause() {
-      if (this.audio) {
-        this.audio.pause();
-        this.isPlaying = false;
+      this.howl && this.howl.pause();
+    },
+    /** 设置播放进度 */
+    setSeek(num: number) {
+      this.timer = num;
+      if (this.howl) {
+        this.howl.seek(num);
       }
     },
-    setCurrentTime(num: number) {
-      this.audio!.currentTime = num;
-      this.currentTime = num;
+    /** 初始化 howl */
+    initHowl(src: string, song: SongType) {
+      this.isPlaying = false;
+      const howl = new Howl({
+        src: src,
+        onplay: () => {
+          this.isPlaying = this.howl!.playing();
+          // 更新播放时间
+          requestAnimationFrame(this.step.bind(this));
+        },
+        onend: () => {
+          howl.stop();
+          this.playNext("next");
+        },
+        onpause: () => {
+          this.isPlaying = false;
+        },
+        onstop: () => {
+          this.isPlaying = false;
+        },
+        onseek: () => {
+          requestAnimationFrame(this.step.bind(this));
+        },
+      });
+      this.howl_arr.unshift({
+        id: song.id,
+        howl,
+      });
+      howl.volume(this.volume);
+      howl.seek(this.timer);
+      return howl;
+    },
+    /** 播放进度 */
+    step() {
+      const self = this;
+      this.timer = self.howl?.seek() || 0;
+      if (self.howl?.playing()) {
+        requestAnimationFrame(self.step.bind(self));
+      }
     },
     async play(song?: SongType) {
       if (song) {
-        await this.getCurrentSongInfo(song);
+        this.clearSongInfo();
+        this.song = song;
       }
-      if (!this.src && this.song) {
-        await this.getCurrentSongInfo(this.song);
+      if (this.howl) {
+        this.howl.play();
+      } else {
+        if (!this.song) throw new Error("没有歌曲信息");
+        const currHowlInfo = this.howl_arr.find(
+          ({ id }) => id == this.song!.id
+        );
+        if (currHowlInfo) {
+          this.howl = currHowlInfo.howl;
+          this.howl.play();
+        } else {
+          const src = await this.getCurrentSongInfo(this.song);
+          this.howl = this.initHowl(src, this.song);
+          setTimeout(() => {
+            this.howl!.play();
+          }, 500);
+        }
       }
-
-      this.audio!.play();
     },
-    setupEventListeners() {
-      if (!this.audio || !this.controller) return;
-      const audio = this.audio;
-      const opt = {
-        signal: this.controller.signal,
-      };
-      audio.addEventListener(
-        "canplaythrough",
-        () => {
-          this.audio!.currentTime = this.currentTime;
-        },
-        opt
-      );
-      audio.addEventListener(
-        "play",
-        () => {
-          this.isPlaying = true;
-        },
-        opt
-      );
-      audio.addEventListener(
-        "pause",
-        () => {
-          this.isPlaying = false;
-
-          // 一些网络歌曲是 VIP 歌曲，播放时长和歌曲时长是不同的，这些歌曲播放完后提示一个 VIP
-          if (this.audio) {
-            const mp3_dt = this.song?.dt || 0;
-            const self_dt = this.audio.duration;
-
-            if (
-              this.audio.currentTime == this.audio.duration &&
-              mp3_dt - self_dt > 5 &&
-              (((this.song?.dt || 0) / 1000) | 0) !== (this.audio.duration | 0)
-            ) {
-              window.$message.warning("vip 歌曲");
-            }
-          }
-        },
-        opt
-      );
-      const self = this;
-      audio.addEventListener(
-        "timeupdate",
-        throttle(function () {
-          self.currentTime = audio.currentTime || 0;
-          if (
-            self.currentTime >= (self.song?.dt || 0) / 1000 - 1 &&
-            self.isPlaying
-          ) {
-            self.playNext("next");
-          }
-        }, 1000)
-      );
-      audio.addEventListener(
-        "error",
-        (e) => {
-          this.isPlaying = false;
-          console.log("audio addEventListener error", e);
-        },
-        opt
-      );
+    /** 清空播放信息 */
+    clearSongInfo() {
+      if (this.howl) {
+        this.howl.stop();
+      }
+      this.timer = 0;
+      this.song = null;
+      this.lyric = "";
+      this.howl = null;
     },
     /** 当前播放音乐的信息 */
     async getCurrentSongInfo(song?: SongType) {
       if (!song) {
-        this.lyric = "";
-        this.song = null;
-        this.initPlayState();
-        return;
+        this.clearSongInfo();
+        return "";
       }
       if (song.id != this.song?.id) {
         this.song = { ...song };
       }
-      this.initPlayState();
-      // 播放地址
-      await this.getAudioSrc(song).then((src) => {
-        if (song.id == this.song?.id) {
-          this.src = src;
-          this.audio!.src = src;
-        }
-      });
       // 歌词
       this.getLyric(song).then((lyric) => {
         if (song.id == this.song?.id) {
           this.lyric = lyric;
         }
       });
+      // 播放地址
+      return await this.getAudioSrc(song)!;
     },
     inPlayList(song: SongType | null) {
       return !!this.playList.find((item) => item.id == song?.id);
@@ -231,7 +193,7 @@ export const useSongStore = defineStore("song", {
         (item) => !ids.find((id) => id == item.id)
       );
       if (this.song && ids.find((item) => item == this.song?.id)) {
-        this.getCurrentSongInfo();
+        this.clearSongInfo();
       }
     },
     /** 添加到播放列表 不播放 */
@@ -289,6 +251,8 @@ export const useSongStore = defineStore("song", {
       if (nextIndex >= this.playList.length) {
         nextIndex = 0;
       }
+      this.stop();
+      this.timer = 0;
       this.play(this.playList[nextIndex]);
     },
     /** 获取播放地址 */

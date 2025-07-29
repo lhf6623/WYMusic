@@ -1,8 +1,8 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
-import UnoCSS from 'unocss/vite'
-import VueJsx from '@vitejs/plugin-vue-jsx'
-import { resolve } from 'path'
+import UnoCSS from "unocss/vite";
+import VueJsx from "@vitejs/plugin-vue-jsx";
+import { resolve } from "path";
 
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
@@ -24,8 +24,17 @@ export default defineConfig(async () => ({
   },
   resolve: {
     alias: {
-      "@": resolve(__dirname,  "src"),
-      "@c": resolve(__dirname,  "src/components/common")
+      "@": resolve(__dirname, "src"),
+      "@c": resolve(__dirname, "src/components/common"),
     },
-  }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "naive-ui": ["naive-ui"],
+        },
+      },
+    },
+  },
 }));

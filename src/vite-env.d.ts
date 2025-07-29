@@ -31,7 +31,6 @@ type MenuOperateType =
 interface Window {
   $message: MessageApi;
   $loadingBar: LoadingBarApi;
-  $audio: HTMLAudioElement | null;
   SongType: SongType;
   TabsType: TabsType;
   MenuOperateType: MenuOperateType;

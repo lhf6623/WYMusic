@@ -3,8 +3,8 @@
 import { useSettingStore } from "@/store/module/setting";
 import { useSongStore } from "@/store/module/song";
 import { useUserStore } from "@/store/module/user";
-import { onMounted, onUnmounted, watch } from "vue";
-import { NMessageProvider, NLoadingBarProvider, NConfigProvider, zhCN, dateZhCN } from "naive-ui";
+import { onMounted, watch } from "vue";
+import { zhCN, dateZhCN } from "naive-ui";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { LogicalSize } from "@tauri-apps/api/dpi";
 import SongListPanel from "./SongListPanel/index.vue";
@@ -16,20 +16,15 @@ const songStore = useSongStore();
 const userStore = useUserStore();
 const app = getCurrentWindow();
 
-
 onMounted(async () => {
-  songStore.initAudio()
   settingStore.showBottomPanel = null;
-
+  songStore.isPlaying = false;
   await songStore.getLoaclMp3Info();
 
   if (userStore.cookie) {
     songStore.getlikeList();
   }
-});
-
-onUnmounted(() => {
-  songStore.destroy()
+  settingStore.updateWindowTop(settingStore.windowTop)
 });
 
 watch(

@@ -38,7 +38,7 @@
             </span>
           </div>
           <i @click="download()" :class="is_downloading" title="mp3 格式" cursor-pointer></i>
-          <NButton text text-color="#8990a2" :loading="likeloading" @click="like()">
+          <NButton text text-color="#8990a2" :loading="likeloading" @click="like()" v-if="settingStore.testApiAudioUrl">
             <template #icon>
               <i :class="is_like_loading"></i>
             </template>
@@ -54,7 +54,6 @@ import { useSongStore } from "@/store/module/song";
 import { useSettingStore } from "@/store/module/setting";
 import { computed, ref, inject, onMounted } from "vue";
 import { numToTime } from "@/tools/index";
-import { NButton, NImage } from "naive-ui"
 
 const songStore = useSongStore();
 const settingStore = useSettingStore();

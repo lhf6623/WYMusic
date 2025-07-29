@@ -1,9 +1,6 @@
 <template>
   <div max-h-130px wfull flex-center flex-col text-18px class="lyric-panel">
-    <!-- 只显示当前行和上一行还有下一行 -->
-    <p v-for="(item, index) in lyric_text" :key="index" :data-time="item.time" text-center mb-1 :class="{
-      hidden: active_index != index && active_index != index - 1 && active_index != index + 1
-    }">{{ item.text || '~~' }}</p>
+    <p v-for="(text, index) in lyric_text" :key="index" text-center mb-1>{{ text || '~~' }}</p>
   </div>
 </template>
 
@@ -14,11 +11,11 @@ import { useSettingStore } from "@/store/module/setting";
 
 const songStore = useSongStore();
 const settingStore = useSettingStore();
-const lyric_text = ref<{ time: number, text: string }[]>([]);
+const lyric_all_text = ref<{ time: number, text: string }[]>([]);
 
 // 处理歌词
 function handleLyric(text: string) {
-  lyric_text.value = text.split('\n').filter(Boolean).map(item => {
+  lyric_all_text.value = text.split('\n').filter(Boolean).map(item => {
     return {
       time: timeToSeconds(item),
       text: item.replace(/\[(.*?)\]/, '') || '',
@@ -26,15 +23,23 @@ function handleLyric(text: string) {
   })
 }
 
-const active_index = computed(() => {
-  for (let i = 0; i < lyric_text.value.length - 1; i++) {
-    const item = lyric_text.value[i]
-    const nextItem = lyric_text.value[i + 1]
-    if (songStore.currentTime >= item.time && songStore.currentTime < nextItem.time) {
-      return i
+const lyric_text = computed(() => {
+  if (lyric_all_text.value.length <= 3) return lyric_all_text.value.map(item => item.text)
+  let index = 1
+
+  const { timer } = songStore
+
+  for (let i = 1; i < lyric_all_text.value.length - 1; i++) {
+    const item = lyric_all_text.value[i]
+    const nextItem = lyric_all_text.value[i + 1]
+    if (timer >= item.time && timer < nextItem.time) {
+      index = i
+      break;
     }
   }
-  return 0
+  return lyric_all_text.value.flatMap((item, i) => {
+    return (i == index - 1 || i == index || i == index + 1) ? [item.text] : []
+  })
 })
 
 onMounted(() => {
@@ -63,7 +68,7 @@ const text_color = computed(() => {
 
 const text_shadow_color = computed(() => {
   const [r, g, b] = settingStore.color.match(/\d+/g)!.map(Number);
-  return `0 0 3px rgba(${r}, ${g}, ${b}, 0.3)`
+  return `0 0 3px rgba(${r}, ${g}, ${b}, 1)`
 })
 
 </script>

@@ -1,47 +1,50 @@
 <template>
-  <div class="audio-visualization">
-    <canvas ref="canvasRef" class="visualization-canvas"></canvas>
+  <div wfull h60px flex-center>
+    <canvas ref="canvasRef" wfull hfull bg-transparent rounded-4px></canvas>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue';
+import { useTemplateRef, onUnmounted, nextTick, computed, watch, onMounted } from 'vue';
 import { useSongStore } from "@/store/module/song";
 import { useSettingStore } from "@/store/module/setting";
+import { Howler } from "howler"
 
 const songStore = useSongStore();
 const settingStore = useSettingStore();
-const canvasRef = ref<HTMLCanvasElement | null>(null);
+const canvasRef = useTemplateRef<HTMLCanvasElement>('canvasRef');
 let audioContext: AudioContext | null = null;
 let analyser: AnalyserNode | null = null;
 let animationId: number | null = null;
 let cleanup: (() => void) | undefined = undefined;
+let gainNode: GainNode | null = null;
 
-// 条纹底部色
-const stripeBottomColor = computed(() => {
-  if (!settingStore.color) return '#000000'
-  const [r, g, b] = settingStore.color.match(/\d+/g)!.map(Number);
-  return `rgba(${r}, ${g}, ${b}, 0.3)`
-})
+
 // 条纹顶部色
 const stripeTopColor = computed(() => {
-  if (!settingStore.color) return '#000000'
+  if (!settingStore.color) return 'rgb(0, 0, 0)'
   const [r, g, b] = settingStore.color.match(/\d+/g)!.map(Number);
   // 顶部颜色取反
-  return `rgba(${255 - r}, ${255 - g}, ${255 - b}, 1)`
+  return `rgb(${255 - r}, ${255 - g}, ${255 - b})`
 })
 
 // 初始化音频分析器
 const initAudioAnalyser = () => {
-  if (!songStore.audio) return;
+  if (!Howler.ctx) return;
 
   try {
-    audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    audioContext = Howler.ctx
+    // 创建独立增益节点
+    gainNode = audioContext.createGain();
+    gainNode.gain.value = 1.0; // 明确设置增益值
+
     analyser = audioContext.createAnalyser();
+    Howler.masterGain.disconnect();
+    Howler.masterGain.connect(gainNode);
+    gainNode.connect(analyser);
+    gainNode.connect(audioContext.destination);
+
     analyser.fftSize = 256; // 控制频率数据的数量
-    const source = audioContext.createMediaElementSource(songStore.audio);
-    source.connect(analyser);
-    analyser.connect(audioContext.destination);
   } catch (error) {
     console.error('音频可视化初始化失败:', error);
   }
@@ -56,13 +59,8 @@ const drawVisualization = () => {
   if (!ctx) return;
 
   // 设置canvas尺寸
-  const updateCanvasSize = () => {
-    canvas.width = canvas.offsetWidth;
-    canvas.height = canvas.offsetHeight;
-  };
-
-  updateCanvasSize();
-  window.addEventListener('resize', updateCanvasSize);
+  canvas.width = canvas.offsetWidth;
+  canvas.height = canvas.offsetHeight;
 
   const bufferLength = analyser.frequencyBinCount;
   const dataArray = new Uint8Array(bufferLength);
@@ -73,10 +71,10 @@ const drawVisualization = () => {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const barWidth = canvas.width / bufferLength * 0.8;
+    const barWidth = Math.floor(canvas.width / bufferLength * 0.8);
+
     let barHeight;
     let x = 0;
-
     // 绘制条纹
     for (let i = 0; i < bufferLength; i++) {
       barHeight = (dataArray[i] / 255) * canvas.height;
@@ -84,7 +82,7 @@ const drawVisualization = () => {
       // 创建渐变颜色
       const gradient = ctx.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
       gradient.addColorStop(0, stripeTopColor.value); // 顶部颜色
-      gradient.addColorStop(1, stripeBottomColor.value); // 底部颜色
+      gradient.addColorStop(1, settingStore.color); // 底部颜色
 
       ctx.fillStyle = gradient;
       ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
@@ -92,53 +90,45 @@ const drawVisualization = () => {
       x += barWidth + 2; // 条纹间距
     }
   };
-
   renderFrame();
-
   // 清理函数
   return () => {
-    window.removeEventListener('resize', updateCanvasSize);
-    if (animationId) cancelAnimationFrame(animationId);
+    if (animationId) {
+      cancelAnimationFrame(animationId);
+      animationId = null
+    }
+    if (gainNode) {
+      Howler.masterGain.disconnect();
+      gainNode.disconnect();
+      Howler.masterGain.connect(Howler.ctx.destination);
+    }
   };
 };
 
-onMounted(async () => {
-  await nextTick();
-  initAudioAnalyser();
-  cleanup = drawVisualization();
-
-  // 监听音频播放事件
-  if (songStore.audio) {
-    songStore.audio.addEventListener('play', () => {
-      if (audioContext && audioContext.state === 'suspended') {
-        audioContext.resume();
-      }
-    });
+watch(() => songStore.isPlaying, () => {
+  if (songStore.isPlaying) {
+    init()
+  } else {
+    cleanup?.();
   }
+})
 
-});
+const init = async () => {
+  await nextTick();
+  if (cleanup) {
+    cleanup()
+  }
+  initAudioAnalyser();
+  setTimeout(() => {
+    cleanup = drawVisualization()
+  }, 0);
+}
+onMounted(() => {
+  if (songStore.howl?.playing()) {
+    init()
+  }
+})
 onUnmounted(() => {
   cleanup?.();
-  if (audioContext) {
-    audioContext.close();
-  }
 });
 </script>
-
-<style scoped>
-.audio-visualization {
-  width: 100%;
-  height: 60px;
-  /* 可根据需要调整高度 */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.visualization-canvas {
-  width: 100%;
-  height: 100%;
-  background: transparent;
-  border-radius: 4px;
-}
-</style>

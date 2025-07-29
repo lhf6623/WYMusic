@@ -42,7 +42,6 @@
 import { computed, ref } from 'vue';
 import Song from './Song.vue';
 import { useSongStore } from "@/store/module/song";
-import { NForm, NInputGroup, NInput, NButton, NScrollbar } from 'naive-ui'
 
 const songStore = useSongStore();
 const props = defineProps<{

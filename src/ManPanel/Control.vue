@@ -1,15 +1,23 @@
 <template>
-  <footer h-50px w-full select-none absolute bottom-0 z-50 bg="#edebeb" v-show="settingStore.focused">
+  <footer flex flex-col justify-center w-full select-none absolute overflow-hidden bottom-0 z-50 transition-all
+    bg="#edebeb" :style="{
+      height: settingStore.focused ? '50px' : '0px',
+    }">
     <!-- 控制 -->
-    <div h-35px relative>
+    <div h-35px min-h-35px relative>
+      <!-- 用户信息 -->
       <div absolute left-0 top-0 h-full flex-center gap-1 overflow-hidden>
         <NAvatar :style="{
           color: '#000',
           backgroundColor: 'transparent',
         }" cursor-pointer @click="showBottomPanel('setting')" :title="user_title">
           <template #default>
-            <img v-if="!!userStore.profile?.avatarUrl" :src="userStore.profile?.avatarUrl" />
-            <i i-solar:user-rounded-outline w20px h20px v-else></i>
+            <img v-show="!!userStore.profile?.avatarUrl" :src="userStore.profile?.avatarUrl" />
+            <NButton v-show="!userStore.profile?.avatarUrl" text>
+              <template #icon>
+                <i i-solar:user-rounded-outline w20px h20px></i>
+              </template>
+            </NButton>
           </template>
         </NAvatar>
         <NButton @click="showBottomPanel('song_list')" text title="底部播放列表">
@@ -34,13 +42,14 @@
         </NButton>
       </div>
       <div h-full absolute right-6px top-0 flex-center gap-6px>
-        <NButton text @click="likeSong" :disabled="!songStore.song">
+        <NButton text @click="likeSong" :disabled="!songStore.song" v-if="settingStore.testApiAudioUrl">
           <template #icon>
             <i :class="isLike ? 'i-flat-color-icons:like' : 'i-mdi:heart-outline'" w20px h20px></i>
           </template>
         </NButton>
 
-        <NButton text @click="songStore.showLyric = !songStore.showLyric">词</NButton>
+        <NButton text @click="settingStore.showAudioView">纹</NButton>
+        <NButton text @click="settingStore.showLyric = !settingStore.showLyric">词</NButton>
         <NPopover :on-update:show="updateShow" :show-arrow="false" scrollable ref="popoverRef"
           style="height: 100px; width: 20px; padding: 0"
           content-style="height: 100%; width: 100%; display: flex;justify-content: center;padding: 10px 0">
@@ -60,22 +69,26 @@
       </div>
     </div>
     <!-- 歌曲播放条 -->
-    <div h-15px flex justify-center overflow-hidden>
-      <div px-10px w-full>
+    <div h-15px min-h-15px flex justify-center overflow-hidden v-if="songStore.song">
+      <div px-6px w-full flex-center text-xs text-gray-500>
+        <span inline-block mr-1>{{ numToTime(songStore.timer * 1000) }}</span>
         <NSlider :tooltip="false" :default-value="33" :theme-overrides="sliderThemeOverrides" :step="1"
           :max="(songStore.song?.dt || 0) / 1000" :disabled="!songStore.song" v-model:value="drag"
           :on-dragend="dragEnd" />
+        <span inline-block ml-1>{{ numToTime(songStore.song?.dt || 0) }}</span>
       </div>
     </div>
   </footer>
 </template>
 
 <script setup lang="tsx">
-import { NButton, NPopover, NSlider, SliderProps, NAvatar } from "naive-ui";
+import type { SliderProps } from "naive-ui";
 import { ref, watch, computed, useTemplateRef, onMounted } from "vue";
 import { useSettingStore } from "@/store/module/setting";
 import { useSongStore } from "@/store/module/song";
 import { useUserStore } from "@/store/module/user";
+import { throttle } from "lodash-es"
+import { numToTime } from "@/tools"
 type SliderThemeOverrides = NonNullable<SliderProps["themeOverrides"]>;
 
 const songStore = useSongStore();
@@ -92,19 +105,17 @@ const user_title = computed(() => {
 })
 
 onMounted(() => {
-  drag.value = songStore.currentTime;
+  drag.value = songStore.timer;
 });
 
-watch(
-  () => songStore.currentTime,
-  (val) => {
-    if (drag.value === songStore.currentTime) return;
-    drag.value = val;
-  }
-);
+const setDrag = throttle((val) => {
+  drag.value = val;
+}, 1000);
+watch(() => songStore.timer, setDrag);
+
 
 function dragEnd() {
-  songStore.setCurrentTime(drag.value || 0);
+  songStore.setSeek(drag.value || 0);
 }
 const playPrev = function () {
   songStore.playNext("prev");
@@ -164,11 +175,11 @@ function offHandle() {
     songStore.volume = oldVolume;
   }
 
-  songStore.audio!.volume = songStore.volume;
+  songStore.howl?.volume(songStore.volume);
 }
 
 watch(() => songStore.volume, () => {
-  songStore.audio!.volume = songStore.volume;
+  songStore.howl?.volume(songStore.volume);
 })
 const isShowRange = ref(false);
 

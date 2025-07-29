@@ -1,7 +1,7 @@
 <template>
   <ul px6px relative overflow-auto hfull class="*:py6px">
     <!-- 用户信息 -->
-    <li flex justify-between v-if="userStatus === 'USER' && is_test_ok">
+    <li flex justify-between v-if="userStatus === 'USER' && settingStore.testApiAudioUrl">
       <div flex items-center gap-10px>
         <NAvatar :src="userStore.profile?.avatarUrl">
         </NAvatar>
@@ -19,7 +19,7 @@
       </NPopconfirm>
     </li>
     <!-- 游客信息 -->
-    <li v-if="userStatus === 'TOURIST' && is_test_ok" flex justify-between items-center>
+    <li v-if="userStatus === 'TOURIST' && settingStore.testApiAudioUrl" flex justify-between items-center>
       <span text-yellow-9>游客</span>
       <NPopconfirm @positive-click="userStore.logout" :show-icon="false">
         <template #trigger>
@@ -33,7 +33,7 @@
       </NPopconfirm>
     </li>
     <!-- 登入操作 -->
-    <li flex-col flex-center gap-2px v-if="userStatus === 'NOT' && is_test_ok">
+    <li flex-col flex-center gap-2px v-if="userStatus === 'NOT' && settingStore.testApiAudioUrl">
       <!-- 未登入 -->
       <div v-if="userStatus === 'NOT'" flex-center flex-col>
         <NSpin :show="userStore.qrCode === 802">
@@ -72,20 +72,10 @@
         </NInputGroup>
       </p>
     </li>
-    <!-- 展示音频可视化面板 -->
-    <li flex justify-between>
-      <span>音频可视化：</span>
-      <NSwitch size="small" v-model:value="settingStore.showAudioVisualization"></NSwitch>
-    </li>
     <!-- 不聚焦时是否展示 titleHead 和 Control -->
     <li flex justify-between>
       <span>专注模式：</span>
       <NSwitch size="small" v-model:value="settingStore.focusMode"></NSwitch>
-    </li>
-    <!-- 窗口置顶 -->
-    <li flex justify-between>
-      <span>窗口置顶：</span>
-      <NSwitch size="small" :value="settingStore.windowTop" :on-update:value="updateWindowTop"></NSwitch>
     </li>
   </ul>
 </template>
@@ -93,10 +83,7 @@
 <script setup lang="ts">
 import { useSettingStore } from "@/store/module/setting";
 import { useUserStore } from "@/store/module/user";
-import { NAvatar, NButton, NImage, NSpin, NInputGroup, NInput, NPopconfirm } from "naive-ui";
 import { computed, ref, watch } from "vue";
-import { NSwitch } from "naive-ui";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 
 const settingStore = useSettingStore();
 const userStore = useUserStore();
@@ -139,7 +126,7 @@ async function testApiAudioUrlFn() {
 }
 
 watch(() => settingStore.showBottomPanel, (newVal) => {
-  if (!is_test_ok.value) return;
+  if (!settingStore.testApiAudioUrl) return;
   if (newVal === 'setting' && !userStore.cookie) {
     userStore.qrLogin(true);
   }
@@ -169,15 +156,4 @@ watch(() => settingStore.apiAudioUrl, () => {
   }
   userStore.qrLogin(false);
 })
-
-const is_test_ok = computed(() => {
-  const { testApiAudioUrl, apiAudioUrl } = settingStore
-  return testApiAudioUrl && apiAudioUrl;
-});
-
-function updateWindowTop(value: boolean) {
-  getCurrentWindow().setAlwaysOnTop(value).then(() => {
-    settingStore.windowTop = value
-  })
-}
 </script>

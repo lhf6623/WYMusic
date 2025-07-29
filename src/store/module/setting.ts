@@ -5,12 +5,13 @@ import analyze from "rgbaster";
 
 import { join, audioDir } from "@tauri-apps/api/path";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 
 export interface SettingStore {
   /** 应用是否被聚焦 */
   focused: boolean;
-  /** 聚焦触发时间 */
-  triggerTime: number;
+  /** 是否展示歌词 */
+  showLyric: boolean;
   /** 主色调 */
   color: string;
   /** 底部面板展示 */
@@ -36,7 +37,7 @@ export const useSettingStore = defineStore("setting", {
   state: (): SettingStore => {
     return {
       focused: true,
-      triggerTime: 4500,
+      showLyric: false,
       color: "rgb(255, 255, 255)",
       showBottomPanel: null,
       localAudioDir: "",
@@ -48,6 +49,18 @@ export const useSettingStore = defineStore("setting", {
     };
   },
   actions: {
+    showAudioView() {
+      this.showAudioVisualization = !this.showAudioVisualization;
+    },
+    /** 窗口置顶 */
+    updateWindowTop(value?: boolean) {
+      const flag = value ?? !this.windowTop;
+      getCurrentWindow()
+        .setAlwaysOnTop(flag)
+        .then(() => {
+          this.windowTop = flag;
+        });
+    },
     /** 获取默认的本地音频目录 */
     async getDefaultAudioDir() {
       return await join(await audioDir(), "WYMusic");
