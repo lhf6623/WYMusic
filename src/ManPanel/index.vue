@@ -77,8 +77,9 @@ const get_pic_url = async () => {
   if (songStore.song) {
     url = songStore.isLocal(songStore.song) ? await settingStore.getWebviewFilePath(songStore.song.picUrl) : songStore.song.picUrl ?? ''
   }
-  url && settingStore.setMainColor(url)
   pic_url.value = url;
+
+  url && settingStore.setMainColor(url)
 }
 watch(() => songStore.song, get_pic_url, { deep: true })
 

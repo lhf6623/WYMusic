@@ -2,7 +2,6 @@
 
 import { useSettingStore } from "@/store/module/setting";
 import { useSongStore } from "@/store/module/song";
-import { useUserStore } from "@/store/module/user";
 import { onMounted, watch } from "vue";
 import { zhCN, dateZhCN } from "naive-ui";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -13,17 +12,12 @@ import ManPanel from "./ManPanel/index.vue";
 
 const settingStore = useSettingStore();
 const songStore = useSongStore();
-const userStore = useUserStore();
 const app = getCurrentWindow();
 
 onMounted(async () => {
   settingStore.showBottomPanel = null;
   songStore.isPlaying = false;
   await songStore.getLoaclMp3Info();
-
-  if (userStore.cookie) {
-    songStore.getlikeList();
-  }
   settingStore.updateWindowTop(settingStore.windowTop)
 });
 
@@ -33,18 +27,6 @@ watch(
     app.setSize(new LogicalSize(330, showBottomPanel ? 660 : 330));
   },
 );
-
-watch(
-  () => userStore.cookie,
-  () => {
-    if (userStore.cookie) {
-      songStore.getlikeList();
-    } else {
-      songStore.likeList = [];
-    }
-  }
-);
-
 </script>
 
 <template>

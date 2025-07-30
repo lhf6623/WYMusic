@@ -42,28 +42,6 @@ export async function search(keywords: string, controller?: AbortController) {
 
   return song_list;
 }
-/**红心与取消红心歌曲 */
-export async function like(id: number | string, like: "false" | "true") {
-  return await musicApi<{
-    code: number;
-    playlistId: number;
-    songs: number[];
-  }>({
-    key: "like",
-    args: { id, like },
-  });
-}
-/** 获取喜欢歌曲列表 id */
-export async function getlikeList(controller?: AbortController) {
-  const { ids } = await musicApi<{
-    ids: number[];
-  }>({
-    key: "likelist",
-    controller,
-  });
-
-  return ids;
-}
 
 /**获取每日推荐歌曲列表*/
 export async function getRecommendSongs(

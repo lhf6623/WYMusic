@@ -25,46 +25,59 @@ export async function getImgColor(
   imgUrl: string,
   imgRegion?: { x: number; y: number; width: number; height: number }
 ): Promise<string> {
+  const box_height = 330;
+  const box_width = 330;
+
   if (!imgUrl) return Promise.reject("请传入图片链接");
   const img = await new Promise((resolve, reject) => {
     const image = new Image();
-    image.crossOrigin = "";
+    image.crossOrigin = "Anonymous";
     image.src = imgUrl;
     image.onload = () => {
       const canvas = document.createElement("canvas");
-      canvas.width = imgRegion?.width || image.width;
-      canvas.height = imgRegion?.height || image.height;
+      const region_ratio = {
+        x: 1,
+        y: 1,
+        w: 1,
+        h: 1,
+      };
+      if (imgRegion) {
+        // 图片和容器的比例
+        region_ratio.h =
+          Math.min(box_height, imgRegion.height) /
+          Math.max(box_height, imgRegion.height);
+        region_ratio.w =
+          Math.min(box_width, imgRegion.width) /
+          Math.max(box_width, imgRegion.width);
+        region_ratio.x = imgRegion.x / box_width;
+        region_ratio.y = imgRegion.y / box_width;
+      }
       const ctx = canvas.getContext("2d");
+      canvas.width = imgRegion?.width ?? image.width;
+      canvas.height = imgRegion?.height ?? image.height;
 
       ctx?.drawImage(
         image,
-        imgRegion?.x || 0,
-        imgRegion?.y || 0,
+        image.width * region_ratio.x,
+        image.height * region_ratio.y,
+        image.width * region_ratio.w,
+        image.height * region_ratio.h,
+        0,
+        0,
         canvas.width,
         canvas.height
       );
 
-      const imageData = ctx!.getImageData(
-        imgRegion?.x || 0,
-        imgRegion?.y || 0,
-        canvas.width,
-        canvas.height
-      );
+      const base64 = canvas.toDataURL("image/png");
 
-      // 保存图片
-      const sliceCanvas = document.createElement("canvas");
-      const sliceCtx = sliceCanvas.getContext("2d");
-
-      // 这个 API 绘制的图片不需要提供宽高，默认是图片的宽高
-      sliceCtx?.putImageData(imageData, 0, 0);
-
-      resolve(sliceCanvas.toDataURL());
+      resolve(base64);
     };
 
     image.onerror = () => {
       reject("图片加载失败");
     };
   });
+
   return await analyze(img).then((res: [{ color: string }]) => {
     const [imgObj] = res;
 

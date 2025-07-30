@@ -38,11 +38,6 @@
             </span>
           </div>
           <i @click="download()" :class="is_downloading" title="mp3 格式" cursor-pointer></i>
-          <NButton text text-color="#8990a2" :loading="likeloading" @click="like()" v-if="settingStore.testApiAudioUrl">
-            <template #icon>
-              <i :class="is_like_loading"></i>
-            </template>
-          </NButton>
         </div>
       </div>
     </div>
@@ -68,7 +63,6 @@ const emit = defineEmits<{
 }>();
 
 const downloading = ref(false);
-const likeloading = ref(false);
 const is_downloading = computed(() => {
   const is_down = songStore.isLocal(props.song)
   const is_download = songStore.downloadList.find(id => id == props.song?.id)
@@ -105,11 +99,6 @@ function changeShowMenu(e: MouseEvent) {
   showMenuAbility(props.song, e.clientX, e.clientY, true)
 }
 
-const is_like_loading = computed(() => {
-  const is_like = songStore.isLike(props.song)
-  return is_like ? "i-flat-color-icons:like" : "i-mdi:heart-outline";
-});
-
 function download() {
   const is_down = songStore.isLocal(props.song)
   if (downloading.value) {
@@ -125,13 +114,6 @@ function download() {
     menuOperateFn('download_null', song)
   }).finally(() => {
     downloading.value = false;
-  });
-}
-
-function like() {
-  likeloading.value = true;
-  songStore.likeSong(props.song).finally(() => {
-    likeloading.value = false;
   });
 }
 

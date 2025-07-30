@@ -10,9 +10,6 @@
       <NTabPane v-if="songStore.localList.length" name="download" tab="本地" display-directive="show:lazy">
         <SongList :list="songStore.localList" :loaging="loaging" type="download" @playAll="playAll"></SongList>
       </NTabPane>
-      <NTabPane v-if="isLogin && settingStore.testApiAudioUrl" name="like" tab="喜欢" display-directive="show:lazy">
-        <SongList :list="songStore.likeList" :loaging="loaging" type="like" @playAll="playAll"></SongList>
-      </NTabPane>
       <NTabPane v-if="settingStore.testApiAudioUrl" name="search" tab="搜索" display-directive="show:lazy">
         <SongList :list="searchList" :loaging="loaging" type="search" @search="handleSearch"></SongList>
       </NTabPane>
@@ -133,8 +130,6 @@ function changeList(song: SongType) {
     list = dailyList.value
   } else if (active.value == 'download') {
     list = songStore.localList
-  } else if (active.value == 'like') {
-    list = songStore.likeList
   } else if (active.value == 'search') {
     list = searchList.value
   }
@@ -163,7 +158,6 @@ const isLogin = computed(() => {
 watch(() => settingStore.testApiAudioUrl, (val) => {
   if (!val) {
     handleTabChange('download')
-    songStore.likeList = []
     searchList.value = []
   }
 })
@@ -228,9 +222,6 @@ async function playAll() {
   }
   if (active.value == 'download') {
     list = songStore.localList
-  }
-  if (active.value == 'like') {
-    list = songStore.likeList
   }
 
   songStore.addPlayList(list);

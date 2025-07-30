@@ -3,8 +3,6 @@ import {
   downloadFile,
   getLocalAllSongs,
   getSongUrlV1,
-  like,
-  getlikeList,
   getSongInfo,
   getLyric,
   checkMusic,
@@ -12,16 +10,12 @@ import {
   getLocalLyric,
 } from "@/tools/api_songs";
 import { versionKey } from "..";
-import dayjs from "dayjs";
 import { getSongName } from "@/tools";
 import { useSettingStore } from "./setting";
 import { Howl } from "howler";
 
 export interface SongStore {
-  /** 请求时间,避免刷新后重复请求 */
-  date: string | null;
   localList: SongType[];
-  likeList: SongType[];
   playList: SongType[];
   /** 下载中 id 列表，主要做请求中状态展示 */
   downloadList: (string | number)[];
@@ -41,6 +35,8 @@ export interface SongStore {
   howl_arr: {
     id: string | number;
     howl: Howl;
+    /** 播放次数 */
+    num: number;
   }[];
 }
 export const useSongStore = defineStore("song", {
@@ -50,9 +46,7 @@ export const useSongStore = defineStore("song", {
   },
   state: (): SongStore => {
     return {
-      date: null,
       localList: [],
-      likeList: [],
       playList: [],
       downloadList: [],
       volume: 0.33,
@@ -81,6 +75,35 @@ export const useSongStore = defineStore("song", {
         this.howl.seek(num);
       }
     },
+    addHowl(song: SongType, howl: Howl) {
+      const howlInfo = this.howl_arr.find((item) => item.id == song.id);
+      if (howlInfo) {
+        howlInfo.num += 1;
+      } else {
+        if (this.howl_arr.length >= 10) {
+          // 移除播放次数最少的, 如果有多个最少的, 移除第一个
+          const minNum = this.howl_arr.reduce((pre, cur) => {
+            return pre.num < cur.num ? pre : cur;
+          }).num;
+          const index = this.howl_arr.findIndex((item) => item.num == minNum);
+          if (index != -1) {
+            this.howl_arr.splice(index, 1);
+          }
+        }
+        this.howl_arr.push({
+          id: song.id,
+          howl,
+          num: 1,
+        });
+      }
+    },
+    getHowl(id: number | string) {
+      const howlInfo = this.howl_arr.find((item) => item.id == id);
+      if (howlInfo) {
+        howlInfo.num += 1;
+      }
+      return howlInfo?.howl;
+    },
     /** 初始化 howl */
     initHowl(src: string, song: SongType) {
       this.isPlaying = false;
@@ -105,10 +128,7 @@ export const useSongStore = defineStore("song", {
           requestAnimationFrame(this.step.bind(this));
         },
       });
-      this.howl_arr.unshift({
-        id: song.id,
-        howl,
-      });
+      this.addHowl(song, howl);
       howl.volume(this.volume);
       howl.seek(this.timer);
       return howl;
@@ -126,24 +146,26 @@ export const useSongStore = defineStore("song", {
         this.clearSongInfo();
         this.song = song;
       }
-      if (this.howl) {
-        this.howl.play();
-      } else {
-        if (!this.song) throw new Error("没有歌曲信息");
-        const currHowlInfo = this.howl_arr.find(
-          ({ id }) => id == this.song!.id
-        );
-        if (currHowlInfo) {
-          this.howl = currHowlInfo.howl;
-          this.howl.play();
-        } else {
-          const src = await this.getCurrentSongInfo(this.song);
-          this.howl = this.initHowl(src, this.song);
-          setTimeout(() => {
-            this.howl!.play();
-          }, 500);
-        }
+      if (!this.song) {
+        throw new Error("没有歌曲信息");
       }
+      const howl = this.getHowl(this.song.id);
+      if (!howl) {
+        const src = await this.getCurrentSongInfo(this.song);
+        this.howl = this.initHowl(src, this.song);
+      }
+
+      if (!this.howl && howl) {
+        this.howl = howl;
+        // 歌词
+        this.getLyric(this.song).then((lyric) => {
+          this.lyric = lyric;
+        });
+      }
+
+      setTimeout(() => {
+        this.howl!.play();
+      }, 500);
     },
     /** 清空播放信息 */
     clearSongInfo() {
@@ -156,11 +178,7 @@ export const useSongStore = defineStore("song", {
       this.howl = null;
     },
     /** 当前播放音乐的信息 */
-    async getCurrentSongInfo(song?: SongType) {
-      if (!song) {
-        this.clearSongInfo();
-        return "";
-      }
+    async getCurrentSongInfo(song: SongType) {
       if (song.id != this.song?.id) {
         this.song = { ...song };
       }
@@ -179,9 +197,6 @@ export const useSongStore = defineStore("song", {
     /** 根据 id  判断是否是已下载歌曲 */
     isLocal(song: SongType | null) {
       return !!this.localList.find((item) => item.id == song?.id);
-    },
-    isLike(song: SongType | null) {
-      return !!this.likeList.find((item) => item.id == song?.id);
     },
     /** 删除播放列表 */
     removePlayList(songs: SongType | SongType[]) {
@@ -318,30 +333,6 @@ export const useSongStore = defineStore("song", {
     async getLoaclMp3Info() {
       return await getLocalAllSongs().then((localList) => {
         this.localList = localList;
-      });
-    },
-    /** 获取喜欢歌曲信息 */
-    async getlikeList() {
-      if (this.date === dayjs().format("YYYY-MM-DD") && this.likeList.length) {
-        return;
-      }
-      const like_ids = await getlikeList();
-
-      this.likeList = await this.getSongInfo(like_ids);
-
-      this.date = dayjs().format("YYYY-MM-DD");
-    },
-    /** 喜欢歌曲 */
-    async likeSong(song: SongType) {
-      const flag = !this.likeList.find((item) => item.id == song.id)
-        ? "true"
-        : "false";
-      await like(song.id, flag).then((res) => {
-        if (res.code === 200) {
-          this.likeList.push(song);
-        } else {
-          this.likeList = this.likeList.filter((item) => item.id !== song.id);
-        }
       });
     },
   },

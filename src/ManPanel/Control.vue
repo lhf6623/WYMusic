@@ -32,7 +32,7 @@
             <i origin-center rotate-180 i-mdi:skip-forward></i>
           </template>
         </NButton>
-        <NButton circle color="#dc2626" @click="fn" mx-12px>
+        <NButton circle color="#dc2626" @click="fn">
           <template #icon>
             <i :class="!songStore.isPlaying ? 'i-mdi:play' : 'i-mdi:pause'"></i>
           </template>
@@ -44,12 +44,6 @@
         </NButton>
       </div>
       <div h-full absolute right-6px top-0 flex-center gap-6px>
-        <NButton text @click="likeSong" :disabled="!songStore.song" v-if="settingStore.testApiAudioUrl">
-          <template #icon>
-            <i :class="isLike ? 'i-flat-color-icons:like' : 'i-mdi:heart-outline'" w20px h20px></i>
-          </template>
-        </NButton>
-
         <NButton text @click="settingStore.showAudioView">频</NButton>
         <NButton text @click="settingStore.showLyric = !settingStore.showLyric">词</NButton>
         <NPopover :on-update:show="updateShow" :show-arrow="false" scrollable ref="popoverRef"
@@ -131,14 +125,6 @@ const fn = function () {
   !songStore.isPlaying ? songStore.play() : songStore.pause();
 }
 
-const isLike = computed(() => {
-  return !!songStore.isLike(songStore.song);
-});
-
-function likeSong() {
-  if (!songStore.song) return;
-  songStore.likeSong(songStore.song);
-}
 // 歌曲列表
 function showBottomPanel(value: 'song_list' | 'setting') {
   if (settingStore.showBottomPanel === value) {

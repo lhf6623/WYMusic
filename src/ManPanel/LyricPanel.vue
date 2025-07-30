@@ -1,11 +1,11 @@
 <template>
-  <div ref="lyricPanel" max-h-130px wfull flex-center flex-col text-18px class="lyric-panel">
+  <div ref="lyricPanel" wfull flex-center flex-col text-18px py-20px class="lyric-panel">
     <p v-for="(text, index) in lyric_text" :key="index" text-center pb-1>{{ text || '~~' }}</p>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, computed, useTemplateRef } from 'vue';
+import { ref, watch, onMounted, computed, useTemplateRef, nextTick } from 'vue';
 import { useSongStore } from "@/store/module/song";
 import { useSettingStore } from "@/store/module/setting";
 import { getImgColor } from "@/tools";
@@ -49,6 +49,8 @@ const lyric_text = computed(() => {
 async function get_color() {
   if (!lyric_all_text.value.length) return;
   if (!songStore.song?.picUrl) return
+
+  await nextTick()
 
   const rect = lyricPanel.value!.getBoundingClientRect()
   const url = songStore.isLocal(songStore.song) ? await settingStore.getWebviewFilePath(songStore.song.picUrl) : songStore.song.picUrl
@@ -94,13 +96,23 @@ const text_color = computed(() => {
 
 const text_shadow_color = computed(() => {
   const [r, g, b] = color.value.match(/\d+/g)!.map(Number);
-  return `0 0 3px rgba(${r}, ${g}, ${b}, 1)`
+  return `rgba(${r}, ${g}, ${b}, 1)`
+})
+const lyric_bg_color = computed(() => {
+  const [r, g, b] = color.value.match(/\d+/g)!.map(Number);
+  return `rgba(${r}, ${g}, ${b}, 0.6)`
+})
+const lyric_bg_color1 = computed(() => {
+  const [r, g, b] = color.value.match(/\d+/g)!.map(Number);
+  return `rgba(${r}, ${g}, ${b}, 1)`
 })
 </script>
 
 <style scoped>
 .lyric-panel {
   color: v-bind('text_color');
-  text-shadow: v-bind('text_shadow_color');
+  text-shadow: 0 0 3px v-bind('text_shadow_color');
+  /* 背景渐变 上中下 中间黑色，上下透明 */
+  background: linear-gradient(0deg, transparent, v-bind('lyric_bg_color') 36%, v-bind('lyric_bg_color1') 50%, v-bind('lyric_bg_color') 65%, transparent);
 }
 </style>

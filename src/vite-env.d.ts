@@ -17,7 +17,7 @@ interface SongType {
   picUrl: string;
   dt: number;
 }
-type TabsType = "play_list" | "daily" | "download" | "like" | "search";
+type TabsType = "play_list" | "daily" | "download" | "search";
 type MenuOperateType =
   | "download"
   | "download_null"
