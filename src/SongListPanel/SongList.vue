@@ -1,5 +1,6 @@
 <template>
-  <NScrollbar style="max-height: 286px; width: 330px;" content-style="overflow: hidden;">
+  <NScrollbar ref="scrollbar" style="max-height: 286px; width: 330px;"
+    content-style="overflow: hidden;position: relative;">
     <div v-if="type === 'search'" overflow-hidden px6px pt6px>
       <NForm @submit.prevent="handleSubmit()">
         <NInputGroup>
@@ -35,15 +36,28 @@
         @setActive="setActive">
       </Song>
     </div>
+    <!-- 定位按钮 阴影 -->
+    <div v-if="showPosition" class="!fixed !bottom-6 !right-6 z-999 shadow-md rounded-full">
+      <NButton color="white" text-color="red" circle @click="positionSong">
+        <template #icon>
+          <i i-mdi-target></i>
+        </template>
+      </NButton>
+    </div>
   </NScrollbar>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue';
 import Song from './Song.vue';
+import { ScrollbarInst } from 'naive-ui'
 import { useSongStore } from "@/store/module/song";
 
 const songStore = useSongStore();
+const scrollbar = useTemplateRef<ScrollbarInst>('scrollbar');
+const showPosition = ref(false)
+const observer = ref<IntersectionObserver | null>(null)
+const songRef = ref<Element | null>(null)
 const props = defineProps<{
   loaging: boolean;
   list: SongType[];
@@ -80,5 +94,61 @@ async function playAll() {
 }
 function clearList() {
   emit('clear')
+}
+
+watch(() => songStore.song, () => {
+  if (observer.value) {
+    observer.value.disconnect()
+  }
+  createObserve()
+}, { deep: true })
+// 判断当前播放歌曲是否在可视区域
+function createObserve() {
+  if (!songStore.song?.id) return
+
+  const scrollbarInst = (scrollbar.value as any).scrollbarInstRef
+
+  if (!scrollbarInst) return
+
+  const { contentRef, wrapperRef } = scrollbarInst
+  songRef.value = contentRef.querySelector(`[data-id="${songStore.song.id}"]`);
+
+  if (!songRef.value) return
+
+  observer.value = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      showPosition.value = !entry.isIntersecting
+    })
+  }, {
+    root: wrapperRef,
+    threshold: 0.0,
+  })
+  observer.value.observe(songRef.value)
+}
+
+onMounted(() => {
+  createObserve()
+})
+onUnmounted(() => {
+  if (observer.value) {
+    observer.value.disconnect()
+  }
+})
+
+function positionSong() {
+  if (!songRef.value || !scrollbar.value) return
+
+  const scrollbarInst = (scrollbar.value as any).scrollbarInstRef
+
+  if (!scrollbarInst) return
+
+  const contentRef = scrollbarInst.contentRef
+  const songTop = songRef.value.getBoundingClientRect().top
+  const contentTop = contentRef.getBoundingClientRect().top
+
+  scrollbar.value.scrollTo({
+    top: songTop - contentTop,
+    behavior: 'smooth',
+  })
 }
 </script>

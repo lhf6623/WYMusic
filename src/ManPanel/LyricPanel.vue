@@ -104,7 +104,7 @@ const lyric_bg_color = computed(() => {
 })
 const lyric_bg_color1 = computed(() => {
   const [r, g, b] = color.value.match(/\d+/g)!.map(Number);
-  return `rgba(${r}, ${g}, ${b}, 1)`
+  return `rgba(${r}, ${g}, ${b}, 0.75)`
 })
 </script>
 

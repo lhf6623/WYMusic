@@ -1,24 +1,8 @@
 import { musicApi } from "@/tools/request";
 import { invoke } from "@tauri-apps/api/core";
 
-export type SongDetail = {
-  name: string; // 歌曲标题
-  id: number;
-  ar: Array<{
-    // 歌手列表
-    alias: Array<string>;
-    id: number;
-    name: string;
-  }>;
-  alia: Array<string>; // 别名列表，第一个别名会被显示作副标题
-  fee: 0 | 1 | 4 | 8; // 0: 免费或无版权 1: vip歌曲 4: 购买专辑 8: 非会员可免费播放低音质，会员可播放高音质及下载
-  dt: number; // 歌曲时长
-  al: {
-    id: number;
-    name: string;
-    picUrl: string;
-  };
-  tns: string[];
+type LocalSongType = Omit<SongType, "picUrl"> & {
+  pic_url: string;
 };
 
 /**搜索歌曲 */
@@ -158,24 +142,12 @@ export async function downloadFile(
   filename: string
 ) {
   try {
-    const song = await invoke<{
-      id: string | number;
-      name: string;
-      singer: string[];
-      pic_url: string;
-      dt: number;
-    }>("download_file", {
+    const song = await invoke<LocalSongType>("download_file", {
       resources,
       filename,
     });
-    const { id, name, singer, pic_url, dt } = song;
-    return {
-      id,
-      name,
-      singer,
-      picUrl: pic_url,
-      dt,
-    };
+    const { pic_url: picUrl, ...data } = song;
+    return { ...data, picUrl };
   } catch (error) {
     console.error("下载失败:", error);
     throw error;
@@ -183,21 +155,10 @@ export async function downloadFile(
 }
 /** 获取本地所有MP3文件信息 */
 export async function getLocalAllSongs(): Promise<SongType[]> {
-  const song_list = await invoke<
-    {
-      id: string | number;
-      name: string;
-      singer: string[];
-      pic_url: string;
-      dt: number;
-    }[]
-  >("get_local_songs");
+  const song_list = await invoke<LocalSongType[]>("get_local_songs");
   return song_list.map((item) => {
-    const { pic_url, ...data } = item;
-    return {
-      ...data,
-      picUrl: item.pic_url,
-    };
+    const { pic_url: picUrl, ...data } = item;
+    return { ...data, picUrl };
   });
 }
 
@@ -218,22 +179,11 @@ export async function getLyric(id: number | string) {
 
 /** 根据 id 获取本地歌曲信息 */
 export async function getLocalSongInfo(idstr: string) {
-  const list = await invoke<
-    {
-      id: string | number;
-      name: string;
-      singer: string[];
-      pic_url: string;
-      dt: number;
-    }[]
-  >("get_song_list", { idstr });
+  const list = await invoke<LocalSongType[]>("get_song_list", { idstr });
 
   return list.map((item) => {
-    const { pic_url, ...data } = item;
-    return {
-      ...data,
-      picUrl: item.pic_url,
-    };
+    const { pic_url: picUrl, ...data } = item;
+    return { ...data, picUrl };
   });
 }
 

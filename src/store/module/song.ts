@@ -158,14 +158,16 @@ export const useSongStore = defineStore("song", {
       if (!this.howl && howl) {
         this.howl = howl;
         // 歌词
-        this.getLyric(this.song).then((lyric) => {
-          this.lyric = lyric;
-        });
+        const lyric = await this.getLyric(this.song);
+        this.lyric = lyric;
       }
 
-      setTimeout(() => {
-        this.howl!.play();
-      }, 500);
+      this.song.lyric = this.lyric;
+      this.playList = this.playList.map((item) => {
+        return item.id == this.song?.id ? { ...item, lyric: this.lyric } : item;
+      });
+
+      this.howl!.play();
     },
     /** 清空播放信息 */
     clearSongInfo() {
@@ -282,6 +284,7 @@ export const useSongStore = defineStore("song", {
     },
     /** 获取歌词 */
     async getLyric(song: SongType) {
+      if (song.lyric) return song.lyric;
       if (this.isLocal(song)) {
         return await getLocalLyric(song.id.toString());
       }
@@ -311,8 +314,8 @@ export const useSongStore = defineStore("song", {
         return null;
       }
 
-      const url = await getSongUrlV1(song.id);
-      const text = await getLyric(song.id);
+      const url = await getSongUrlV1(song.id); // 播放接口有 token 参数，时间一长会过期，需要实时获取
+      const text = song.lyric ? song.lyric : await getLyric(song.id);
       const local_song = await downloadFile(
         {
           mp3_url: url,

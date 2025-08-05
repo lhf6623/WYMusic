@@ -1,6 +1,7 @@
 <template>
-  <div hover="bg-#e2e8fe" class="group flex cursor-pointer select-none" @click="setActive(props.index)"
-    @dblclick="play()" :style="{ backgroundColor: active == props.index ? '#e2e8fe' : '' }">
+  <div hover="bg-#e2e8fe" :data-id="`${song.id}`" class="group flex cursor-pointer select-none"
+    @click="setActive(props.index)" @dblclick="play()"
+    :style="{ backgroundColor: active == props.index ? '#e2e8fe' : '' }">
     <p w30px flex-shrink-0 flex-center text="#8990a2" cursor-pointer>
       <span v-if="songStore.song?.id != props.song.id" inline-block group-hover:hidden>
         {{ (props.index + 1).toString().padStart(2, "0") }}
