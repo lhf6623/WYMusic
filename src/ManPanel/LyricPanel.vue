@@ -27,6 +27,10 @@ function get_lyric_text(text: string) {
   })
 }
 
+const showPanel = computed(() => {
+  return !!songStore.song ? 'block' : 'none'
+})
+
 const lyric_text = computed(() => {
   if (lyric_all_text.value.length <= 3) return lyric_all_text.value.map(item => item.text)
   let index = 1
@@ -110,6 +114,7 @@ const lyric_bg_color1 = computed(() => {
 
 <style scoped>
 .lyric-panel {
+  display: v-bind('showPanel');
   color: v-bind('text_color');
   text-shadow: 0 0 3px v-bind('text_shadow_color');
   /* 背景渐变 上中下 中间黑色，上下透明 */
