@@ -1,23 +1,28 @@
 <template>
-  <div ref="lyricPanel" wfull flex-center flex-col text-18px py-20px class="lyric-panel">
+  <div ref="lyricPanel" wfull flex-center text-18px class="lyric-panel">
     <p v-for="(text, index) in lyric_text" :key="index" text-center pb-1>{{ text || '~~' }}</p>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, computed, useTemplateRef, nextTick } from 'vue';
+import { ref, watch, onMounted, computed } from 'vue';
 import { useSongStore } from "@/store/module/song";
-import { useSettingStore } from "@/store/module/setting";
-import { getImgColor } from "@/tools";
+import { useSettingStore } from '@/store/module/setting';
 
 const songStore = useSongStore();
-const settingStore = useSettingStore();
+const settingStore = useSettingStore()
 const lyric_all_text = ref<{ time: number, text: string }[]>([]);
-const color = ref('rgb(255, 255, 255)')
-const lyricPanel = useTemplateRef('lyricPanel')
 
 // 处理歌词
-function get_lyric_text(text: string) {
+async function get_lyric_text() {
+  if (!songStore.currSong) {
+    lyric_all_text.value = []
+    return;
+  }
+  let text = ''
+  if (songStore.currSong.lyric) {
+    text = songStore.currSong.lyric
+  }
 
   lyric_all_text.value = text.split('\n').filter(Boolean).map(item => {
     return {
@@ -28,7 +33,7 @@ function get_lyric_text(text: string) {
 }
 
 const showPanel = computed(() => {
-  return !!songStore.song ? 'block' : 'none'
+  return !!songStore.currSong ? 'block' : 'none'
 })
 
 const lyric_text = computed(() => {
@@ -50,39 +55,15 @@ const lyric_text = computed(() => {
   })
 })
 
-async function get_color() {
-  if (!lyric_all_text.value.length) return;
-  if (!songStore.song?.picUrl) return
+onMounted(get_lyric_text)
 
-  await nextTick()
-
-  const rect = lyricPanel.value!.getBoundingClientRect()
-  const url = songStore.isLocal(songStore.song) ? await settingStore.getWebviewFilePath(songStore.song.picUrl) : songStore.song.picUrl
-
-  const _color = await getImgColor(url, {
-    width: rect.width,
-    height: rect.height,
-    x: rect.x,
-    y: rect.y
-  });
-  if (_color) {
-    color.value = _color
-  }
-}
-
-onMounted(async () => {
-  get_lyric_text(songStore.lyric)
-  get_color()
-})
-
-watch(() => songStore.lyric, () => {
-  get_lyric_text(songStore.lyric)
-  get_color()
-})
+watch(() => songStore.currSongId, get_lyric_text, { deep: true })
 
 function timeToSeconds(timeString: string) {
 
-  const date_arr = timeString.match(/([\d]+)/g);
+  const time = timeString.match(/\[(.*?)\]/)?.[1]
+  if (!time) return 0
+  const date_arr = time.match(/([\d]+)/g);
   if (!date_arr) return 0
   let res = 0
   for (let i = 0; i < date_arr.length - 1; i++) {
@@ -94,21 +75,20 @@ function timeToSeconds(timeString: string) {
 }
 
 const text_color = computed(() => {
-  const [r, g, b] = color.value.match(/\d+/g)!.map(Number);
+  const [r, g, b] = settingStore.color.match(/\d+/g)!.map(Number);
   return `rgba(${255 - r}, ${255 - g}, ${255 - b}, 1)`
 })
 
 const text_shadow_color = computed(() => {
-  const [r, g, b] = color.value.match(/\d+/g)!.map(Number);
-  return `rgba(${r}, ${g}, ${b}, 1)`
+  const [r, g, b] = settingStore.color.match(/\d+/g)!.map(Number);
+  return `0 0 3px rgba(${r}, ${g}, ${b}, 1)`
 })
-const lyric_bg_color = computed(() => {
-  const [r, g, b] = color.value.match(/\d+/g)!.map(Number);
-  return `rgba(${r}, ${g}, ${b}, 0.6)`
-})
-const lyric_bg_color1 = computed(() => {
-  const [r, g, b] = color.value.match(/\d+/g)!.map(Number);
-  return `rgba(${r}, ${g}, ${b}, 0.75)`
+
+const backgroundColor = computed(() => {
+  const [r, g, b] = settingStore.color.match(/\d+/g)!.map(Number);
+  const rgba = `rgba(${r}, ${g}, ${b}, 0.8)`
+  const rgba1 = `rgba(${r}, ${g}, ${b}, 0.6)`
+  return `linear-gradient(0deg, transparent, ${rgba1} 30%, ${rgba} 50%, ${rgba1} 70%, transparent)`
 })
 </script>
 
@@ -116,8 +96,8 @@ const lyric_bg_color1 = computed(() => {
 .lyric-panel {
   display: v-bind('showPanel');
   color: v-bind('text_color');
-  text-shadow: 0 0 3px v-bind('text_shadow_color');
+  text-shadow: v-bind('text_shadow_color');
   /* 背景渐变 上中下 中间黑色，上下透明 */
-  background: linear-gradient(0deg, transparent, v-bind('lyric_bg_color') 36%, v-bind('lyric_bg_color1') 50%, v-bind('lyric_bg_color') 65%, transparent);
+  background: v-bind('backgroundColor');
 }
 </style>

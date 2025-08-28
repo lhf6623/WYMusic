@@ -6,46 +6,35 @@
 
 <script setup lang="ts">
 import { DropdownOption } from 'naive-ui'
-import { computed, inject } from 'vue';
+import { computed } from 'vue';
 import { useSongStore } from "@/store/module/song"
+import { useMenuInject } from "./useMenuContext"
 
+const { menuOperate, showMenu, selectMenu } = useMenuInject()
 const songStore = useSongStore()
 const props = defineProps<{
-  song: SongType | null,
+  songId: string | number | null,
   x: number,
   y: number,
   show: boolean
 }>()
-const menuOperate = inject('menuOperate', { add_play_list: false, remove_play_list: false })
-const menuOperateFn = inject<(key: MenuOperateType, song: SongType | null) => void>("menuOperateFn", () => { });
-const showMenuAbility = inject<(song: SongType | null, x: number, y: number, show: boolean) => void>("showMenuAbility", () => { });
 function onClickoutside() {
   setTimeout(() => {
-    showMenuAbility(props.song, props.x, props.y, false)
+    showMenu(props.songId, props.x, props.y, false)
   }, 0);
 }
 function handleSelect(key: MenuOperateType) {
-  menuOperateFn(key, props.song)
-  showMenuAbility(props.song, props.x, props.y, false)
-
+  selectMenu(key, props.songId)
+  showMenu(props.songId, props.x, props.y, false)
 }
 
 const menu = computed<Array<DropdownOption>>(() => {
-  if (!props.song) return []
-  const is_local = songStore.isLocal(props.song)
-  const is_play = songStore.song?.id == props.song?.id
-  const is_play_list = songStore.inPlayList(props.song)
-  const is_download = songStore.downloadList.find(id => id == props.song?.id)
+  if (!props.songId) return []
+
+  const is_play = songStore.currSongId == props.songId
+  const is_play_list = songStore.inPlayList(props.songId)
 
   const { add_play_list, remove_play_list } = menuOperate
-
-  const down = is_download ? [] : [!is_local ? {
-    label: '下载',
-    key: 'download',
-  } : {
-    label: '删除下载',
-    key: 'delete_download',
-  }];
 
   const play = is_play && songStore.isPlaying ? {
     label: '暂停',
@@ -56,9 +45,9 @@ const menu = computed<Array<DropdownOption>>(() => {
   }
 
   // 当前歌曲 和下一首歌曲
-  const index = songStore.playList.findIndex(item => item.id == songStore.song?.id)
+  const index = songStore.playList.findIndex(item => item == songStore.currSongId)
   const next_index = index == songStore.playList.length - 1 ? 0 : index + 1
-  const is_next_song = songStore.playList[next_index]?.id == props.song?.id
+  const is_next_song = songStore.playList[next_index] == props.songId
 
   const next_play = songStore.playList.length && !is_play && !is_next_song ? [{
     label: '下一首播放',
@@ -74,12 +63,22 @@ const menu = computed<Array<DropdownOption>>(() => {
     label: '从列表中移除',
     key: 'remove_play_list',
   }] : []
+
+  const song = songStore.allList.find((item) => item.id == props.songId)
+  const download = !song?.mp3 ? [{
+    label: '下载',
+    key: 'download',
+  }] : []
   return [
     play,
     ...next_play,
     ...add_play_list_item,
-    ...down,
-    ...remove_play_list_item
+    ...remove_play_list_item,
+    ...download,
+    {
+      label: '删除文件',
+      key: 'delete',
+    }
   ]
 })
 

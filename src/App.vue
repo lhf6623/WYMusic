@@ -9,6 +9,7 @@ import { LogicalSize } from "@tauri-apps/api/dpi";
 import SongListPanel from "./SongListPanel/index.vue";
 import Setting from "./Setting.vue";
 import ManPanel from "./ManPanel/index.vue";
+import { getSongs } from '@/tools/api_local_songs'
 
 const settingStore = useSettingStore();
 const songStore = useSongStore();
@@ -16,8 +17,13 @@ const app = getCurrentWindow();
 
 onMounted(async () => {
   settingStore.showBottomPanel = null;
+  settingStore.focused = true;
   songStore.isPlaying = false;
-  await songStore.getLoaclMp3Info();
+
+  getSongs("").then(songList => {
+    songStore.localList = songList.map(item => item.id);
+    songStore.updateAllList(songList);
+  })
   settingStore.updateWindowTop(settingStore.windowTop)
 });
 

@@ -3,7 +3,6 @@ import { versionKey } from "..";
 import { getImgColor } from "@/tools";
 
 import { join, audioDir } from "@tauri-apps/api/path";
-import { convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
 export interface SettingStore {
@@ -61,13 +60,8 @@ export const useSettingStore = defineStore("setting", {
         });
     },
     /** 获取默认的本地音频目录 */
-    async getDefaultAudioDir() {
-      return await join(await audioDir(), "WYMusic");
-    },
-    /** 获取能在webview中使用的文件路径 */
-    async getWebviewFilePath(name: string, dir?: string) {
-      const path = await join(dir ?? this.localAudioDir, `${name}`);
-      return await convertFileSrc(path);
+    async getDefaultAudioDir(fileName?: string) {
+      return await join(await audioDir(), "WYMusic", fileName || "");
     },
     /** 获取主色调 */
     setMainColor(url: string) {

@@ -11,19 +11,19 @@
     </div>
     <div v-if="loaging" text-center>加载中。。。</div>
     <div v-else relative wfull min-w-330px px15px>
-      <div flex wfull>
+      <div flex wfull items-center>
         <p w30px text-center>#</p>
         <div flex flex-1 gap-6px justify-between>
-          <span>标题（{{ song_list?.length }}）</span>
+          <span v-if="type == 'search'">标题</span>
+          <NInput v-else size="tiny" placeholder="标题" clearable v-model:value="filterInput" :bordered="false"></NInput>
           <div>
-            <NButton @click="clearList" text v-show="type === 'play_list'">
+            <NButton @click="clearList" text v-show="type === 'playList'">
               <template #icon>
                 <i i-mdi:trash-can-outline mr-3px></i>
               </template>
               清空
             </NButton>
-            <NButton @click="playAll" v-show="!['play_list', 'search'].includes(type)" text color="#fc3c55"
-              size="small">
+            <NButton @click="playAll" v-show="!['playList', 'search'].includes(type)" text color="#fc3c55" size="small">
               <template #icon>
                 <i i-mdi:play mr-3px></i>
               </template>
@@ -32,12 +32,12 @@
           </div>
         </div>
       </div>
-      <Song v-for="(item, index) in song_list" :index="index" :key="item.id" :song="item" :active="song_list_active"
+      <Song v-for="(id, index) in list" :index="index" :key="id" :songId="id" :type="type" :active="song_list_active"
         @setActive="setActive">
       </Song>
     </div>
     <!-- 定位按钮 阴影 -->
-    <div v-if="showPosition" class="!fixed !bottom-6 !right-6 z-999 shadow-md rounded-full">
+    <div v-if="showPosition && !filterInput" class="!fixed !bottom-6 !right-6 z-999 shadow-md rounded-full">
       <NButton color="white" text-color="red" circle @click="positionSong">
         <template #icon>
           <i i-mdi-target></i>
@@ -59,9 +59,10 @@ const showPosition = ref(false)
 const observer = ref<IntersectionObserver | null>(null)
 const songRef = ref<Element | null>(null)
 const props = defineProps<{
-  loaging: boolean;
-  list: SongType[];
+  loaging?: boolean;
+  list: (number | string)[];
   type: TabsType;
+  activeType: TabsType;
 }>()
 const emit = defineEmits<{
   search: [query: string];
@@ -70,17 +71,22 @@ const emit = defineEmits<{
 }>()
 const song_list_active = ref<null | number>(null);
 
-const song_list = computed(() => {
-  if (!props.list.length) return []
-
-  return props.list.map((item) => {
-    return {
-      ...item,
-      picUrl: songStore.isLocal(item) ? item.picUrl : item.picUrl.replace("http://", "https://"),
-    };
-  });
-});
 const selectValue = ref('');
+const filterInput = ref('')
+const filterList = computed(() => {
+  if (!filterInput.value) return props.list
+  const list = props.list.map(id => {
+    return songStore.allList.find(item => item.id === id)!
+  }).filter(item => {
+    return item.name.toLocaleLowerCase().includes(filterInput.value.toLocaleLowerCase())
+  }).map(item => item.id)
+
+  return list
+})
+
+const list = computed(() => {
+  return filterList.value.length ? filterList.value : props.list
+})
 
 function handleSubmit() {
   emit('search', selectValue.value)
@@ -96,39 +102,32 @@ function clearList() {
   emit('clear')
 }
 
-watch(() => songStore.song, () => {
-  if (observer.value) {
-    observer.value.disconnect()
-  }
-  createObserve()
-}, { deep: true })
+watch(() => [list.value, props.activeType, songStore.currSongId], createObserve, { deep: true })
+
 // 判断当前播放歌曲是否在可视区域
 function createObserve() {
-  if (!songStore.song?.id) return
+  if (observer.value) {
+    observer.value.disconnect()
+    observer.value = null
+  }
+  if (!songStore.currSongId) return
 
   const scrollbarInst = (scrollbar.value as any).scrollbarInstRef
 
   if (!scrollbarInst) return
 
-  const { contentRef, wrapperRef } = scrollbarInst
-  songRef.value = contentRef.querySelector(`[data-id="${songStore.song.id}"]`);
+  const { contentRef } = scrollbarInst
+  songRef.value = contentRef.querySelector(`[data-id="${props.type}_${songStore.currSongId}"]`);
 
   if (!songRef.value) return
 
   observer.value = new IntersectionObserver((entries) => {
-    entries.forEach((entry) => {
-      showPosition.value = !entry.isIntersecting
-    })
-  }, {
-    root: wrapperRef,
-    threshold: 0.0,
+    showPosition.value = entries[0].intersectionRatio <= 0
   })
   observer.value.observe(songRef.value)
 }
 
-onMounted(() => {
-  createObserve()
-})
+onMounted(createObserve)
 onUnmounted(() => {
   if (observer.value) {
     observer.value.disconnect()

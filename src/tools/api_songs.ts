@@ -1,9 +1,47 @@
 import { musicApi } from "@/tools/request";
-import { invoke } from "@tauri-apps/api/core";
+import {
+  downloadFile,
+  downloadImages,
+  getSongs,
+} from "@/tools/api_local_songs";
+import { getSongName } from "./index";
+import { SongDetail } from "NeteaseCloudMusicApi";
 
-type LocalSongType = Omit<SongType, "picUrl"> & {
-  pic_url: string;
-};
+async function getList(songList: SongDetail[]) {
+  const ids = songList.map((item) => item.id);
+  const songs = await getSongs(ids.join(","));
+
+  const remoteSongs = songList.filter((item) => {
+    const song = songs.find((song) => song.id == item.id);
+    return !song;
+  });
+
+  let songInfo: SongType[] = [];
+  if (remoteSongs.length > 0) {
+    const data = remoteSongs.map((item) => {
+      const { id, name, ar, al, dt } = item;
+      const song = {
+        id: id.toString(),
+        name,
+        singer: ar.map((item) => item.name),
+        dt,
+        img: al.picUrl.replace("http://", "https://"),
+      };
+      songInfo.push(song);
+      return {
+        id: id.toString(),
+        url: al.picUrl.replace("http://", "https://"),
+        name: getSongName(song, "jpg"),
+      };
+    });
+    // 在后台静默下载图片
+    downloadImages(data);
+  }
+
+  return [...songs, ...songInfo];
+}
+
+// 先在本地查询是否存在，如果没有就去请求远程，再保存在本地，返回本地的资源
 
 /**搜索歌曲 */
 export async function search(keywords: string, controller?: AbortController) {
@@ -16,15 +54,7 @@ export async function search(keywords: string, controller?: AbortController) {
     controller,
     args: { keywords },
   });
-  const song_list = res.result.songs.map((item) => ({
-    id: item.id,
-    name: item.name,
-    singer: item.ar.map((item) => item.name),
-    picUrl: item.al.picUrl,
-    dt: item.dt,
-  }));
-
-  return song_list;
+  return await getList(res.result.songs);
 }
 
 /**获取每日推荐歌曲列表*/
@@ -35,14 +65,7 @@ export async function getRecommendSongs(
     key: "recommend_songs",
     controller,
   });
-  const song_list = res.data.dailySongs.map((item) => ({
-    id: item.id,
-    name: item.name,
-    singer: item.ar.map((item) => item.name),
-    picUrl: item.al.picUrl,
-    dt: item.dt,
-  }));
-  return song_list || [];
+  return await getList(res.data.dailySongs);
 }
 /**
  * 获取歌曲详情，id可以是 123,123,234,345,456 这种形式
@@ -54,10 +77,19 @@ export async function getSongInfo(
   controller?: AbortController
 ): Promise<SongType[]> {
   const ids = id.toString();
+  // 查询本地是否有歌曲，可能得到部分歌曲信息，其他需要从网络查询
+  const songs = await getSongs(ids);
+
+  const id_arr = ids.split(",");
+  if (songs.length === id_arr.length) return songs;
+
+  const local_ids = songs.map((item) => item.id);
+  const remote_ids = id_arr.filter((item) => !local_ids.includes(item));
+
   const res = await musicApi({
     key: "song_detail",
     args: {
-      ids: ids,
+      ids: remote_ids.join(","),
       timestamp: Date.now(),
     },
     controller,
@@ -66,15 +98,27 @@ export async function getSongInfo(
     code: number;
     songs: SongDetail[];
   };
+  const newSongInfo = await Promise.all(
+    body.songs.map(async (item) => {
+      const { id, name, ar, al, dt } = item;
+      return await downloadFile(
+        {
+          mp3_url: "",
+          image_url: al.picUrl,
+          text: "",
+        },
+        getSongName({
+          id,
+          name,
+          singer: ar.map((item) => item.name),
+          dt,
+        })
+      );
+    })
+  );
 
-  const song_list = body.songs.map((item) => ({
-    id: item.id,
-    name: item.name,
-    singer: item.ar.map((item) => item.name),
-    picUrl: item.al.picUrl,
-    dt: item.dt,
-  }));
-  return song_list;
+  songs.push(...newSongInfo);
+  return songs;
 }
 /** 音乐是否可用 */
 export async function checkMusic(id: number | string) {
@@ -95,13 +139,24 @@ type Level =
   | "jymaster";
 /** 获取播放地址 */
 export async function getSongUrlV1(
-  id: number | string,
+  id: string | number,
   level: Level = "standard"
 ) {
+  // 这里应该是有 歌曲信息的，但是没有 mp3 地址
+  const songs = await getSongs(id.toString());
+  if (songs.length && songs[0]?.mp3) {
+    return songs[0].mp3;
+  }
+
+  // 只提示，不做阻拦
+  const check_music = await checkMusic(id);
+  if (!check_music.success) {
+    window.$message.error(check_music.message);
+  }
   const res = await musicApi({
     key: "song_url_v1",
     args: {
-      id,
+      id: id,
       level,
       timestamp: Date.now(),
     },
@@ -114,56 +169,26 @@ export async function getSongUrlV1(
       id: number;
     }>;
   };
-  return body.data[0].url.replace("http://", "https://");
-}
-
-/**歌曲播放链接 */
-export async function getSongUrl(id: number | string) {
-  const songUrl = await musicApi<{
-    data: {
-      url: string;
-    }[];
-  }>({
-    key: "song_url",
-    args: {
-      id,
+  const song = await downloadFile(
+    {
+      mp3_url: body.data[0].url.replace("http://", "https://"),
+      image_url: null,
+      text: null,
     },
-  });
+    getSongName(songs[0])
+  );
 
-  return songUrl.data[0].url;
-}
-/** 根据url 下载文件 */
-export async function downloadFile(
-  resources: {
-    mp3_url: string;
-    image_url: string;
-    text: string;
-  },
-  filename: string
-) {
-  try {
-    const song = await invoke<LocalSongType>("download_file", {
-      resources,
-      filename,
-    });
-    const { pic_url: picUrl, ...data } = song;
-    return { ...data, picUrl };
-  } catch (error) {
-    console.error("下载失败:", error);
-    throw error;
-  }
-}
-/** 获取本地所有MP3文件信息 */
-export async function getLocalAllSongs(): Promise<SongType[]> {
-  const song_list = await invoke<LocalSongType[]>("get_local_songs");
-  return song_list.map((item) => {
-    const { pic_url: picUrl, ...data } = item;
-    return { ...data, picUrl };
-  });
+  return song.mp3;
 }
 
 /** 获取歌词 */
-export async function getLyric(id: number | string) {
+export async function getLyric(id: string | number) {
+  // 这里应该是有 歌曲信息的，但是没有 mp3 地址
+  const songs = await getSongs(id.toString());
+
+  if (songs.length && songs[0].lyric) {
+    return songs[0].lyric;
+  }
   const lyric = await musicApi<{
     lrc: {
       lyric: string;
@@ -171,28 +196,17 @@ export async function getLyric(id: number | string) {
   }>({
     key: "lyric",
     args: {
-      id,
+      id: id,
     },
   });
-  return lyric.lrc.lyric;
-}
 
-/** 根据 id 获取本地歌曲信息 */
-export async function getLocalSongInfo(idstr: string) {
-  const list = await invoke<LocalSongType[]>("get_song_list", { idstr });
-
-  return list.map((item) => {
-    const { pic_url: picUrl, ...data } = item;
-    return { ...data, picUrl };
-  });
-}
-
-/** 获取本地 text 歌词文本 */
-export async function getLocalLyric(id: string) {
-  return await invoke<string>("get_lyric", { id });
-}
-
-/** 删除本地文件 */
-export async function deleteFile(id: string | number) {
-  return await invoke<string>("delete_file", { id: id.toString() });
+  const songInfo = await downloadFile(
+    {
+      mp3_url: null,
+      image_url: null,
+      text: lyric.lrc.lyric,
+    },
+    getSongName(songs[0])
+  );
+  return songInfo;
 }

@@ -14,10 +14,11 @@ interface SongType {
   id: string | number;
   name: string;
   singer: string[];
-  picUrl: string;
   dt: number;
   // 歌词 如果播放过应该把歌词放进来
   lyric?: string;
+  img?: string;
+  mp3?: string;
 }
 type SongDetail = {
   name: string; // 歌曲标题
@@ -38,15 +39,14 @@ type SongDetail = {
   };
   tns: string[];
 };
-type TabsType = "play_list" | "daily" | "download" | "search";
+type TabsType = "playList" | "dailyList" | "localList" | "search";
 type MenuOperateType =
-  | "download"
-  | "download_null"
-  | "delete_download"
   | "pause"
   | "play"
   | "next_play"
   | "add_play_list"
+  | "download"
+  | "delete"
   | "remove_play_list";
 
 interface Window {

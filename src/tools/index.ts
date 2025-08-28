@@ -1,10 +1,38 @@
 import analyze from "rgbaster";
+import { join, audioDir } from "@tauri-apps/api/path";
+import { convertFileSrc } from "@tauri-apps/api/core";
 
-export function getSongName(song: SongType) {
+export async function getWebviewFilePath(
+  song?: SongType,
+  suffixType: string = "mp3"
+) {
+  if (!song) return "";
+
+  if (song.img && song.img.includes("https://")) {
+    return song.img;
+  }
+  const fileName = getSongName(song, suffixType);
+  const audioPath = await audioDir();
+  const filePath = await join(audioPath, "WYMusic", fileName);
+  const url = convertFileSrc(filePath);
+
+  // 测试是否可用
+  try {
+    const res = await fetch(url);
+    if (res.status === 200) {
+      return url;
+    }
+  } catch (error) {
+    return undefined;
+  }
+  return undefined;
+}
+
+export function getSongName(song: SongType, suffixType: string = "mp3") {
   const { name, singer, id } = song;
-  const _singer = singer.join(" ");
-  const fileName = `${name}-${_singer}-${id}`;
-  return `${fileName}.mp3`;
+  const _singer = singer.join("_#_");
+  const fileName = `${name}__${_singer}__${id}`;
+  return `${fileName}.${suffixType}`;
 }
 
 export function numToTime(num?: number) {
@@ -36,8 +64,8 @@ export async function getImgColor(
     image.onload = () => {
       const canvas = document.createElement("canvas");
       const region_ratio = {
-        x: 1,
-        y: 1,
+        x: 0,
+        y: 0,
         w: 1,
         h: 1,
       };
@@ -68,7 +96,7 @@ export async function getImgColor(
         canvas.height
       );
 
-      const base64 = canvas.toDataURL("image/png");
+      const base64 = canvas.toDataURL("image/jpeg", 0.5);
 
       resolve(base64);
     };

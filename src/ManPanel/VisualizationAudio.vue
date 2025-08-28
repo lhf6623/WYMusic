@@ -89,6 +89,17 @@ const drawVisualization = () => {
 
       x += barWidth + 2; // 条纹间距
     }
+
+    if (!settingStore.focused) {
+      const progress = songStore.timer / ((songStore.currSong?.dt ?? 0) / 1000)
+
+      // 进度条
+      const gradient = ctx.createLinearGradient(0, canvas.height - 2, canvas.width * progress, canvas.height - 2);
+      gradient.addColorStop(0, settingStore.color); // 顶部颜色
+      gradient.addColorStop(1, stripeTopColor.value); // 底部颜色
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, canvas.height - 2, canvas.width * progress, 2);
+    }
   };
 
   renderFrame();
