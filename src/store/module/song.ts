@@ -5,9 +5,9 @@ import {
   getLyric,
   getRecommendSongs,
 } from "@/tools/api_songs";
-import { deleteFile, getImgBase64 } from "@/tools/api_local_songs";
+import { deleteFile } from "@/tools/api_local_songs";
 import { versionKey } from "..";
-import { getWebviewFilePath } from "@/tools";
+import { getWebviewFilePath, getURL } from "@/tools";
 import { Howl } from "howler";
 import dayjs from "dayjs";
 // 维护所有歌曲的列表，包括本地和网络歌曲，其他歌曲列表保存 id,
@@ -40,6 +40,10 @@ export interface SongStore {
   }[];
   // 点击播放时，有加载状态
   playLoading: boolean;
+  // URL缓存地址
+  cacheURL: string;
+  // 当前播放 ID
+  soundId: number | null;
 }
 export const useSongStore = defineStore("song", {
   persist: {
@@ -60,6 +64,8 @@ export const useSongStore = defineStore("song", {
       howl: null,
       howlArr: [],
       playLoading: false,
+      cacheURL: "",
+      soundId: null,
     };
   },
   getters: {
@@ -113,14 +119,19 @@ export const useSongStore = defineStore("song", {
         navigator.mediaSession &&
         "MediaMetadata" in window
       ) {
+        if (this.cacheURL) {
+          URL.revokeObjectURL(this.cacheURL);
+          this.cacheURL = "";
+        }
         try {
-          const metadata = new (window as any).MediaMetadata({
+          this.cacheURL = await getURL(song);
+          const metadata = new MediaMetadata({
             title: song.name,
             artist: song.singer.join(", "),
             album: "WYMusic",
             artwork: [
               {
-                src: await getImgBase64(song.id.toString()),
+                src: this.cacheURL,
                 sizes: "1000x1000",
                 type: "image/jpeg",
               },
@@ -292,21 +303,26 @@ export const useSongStore = defineStore("song", {
         throw new Error("播放歌曲为空");
       }
       const song = await this.downSong(this.currSongId);
-      this.howl = this.getHowl(this.currSongId)!;
-      if (
-        !this.howl ||
-        (this.howl.state() !== "loaded" && this.howl.state() !== "loading")
-      ) {
-        const src = await getWebviewFilePath(song);
-        this.howl = this.initHowl(src!, song);
-      }
-      this.howl.volume(this.volume);
+      // this.howl = this.getHowl(this.currSongId)!;
+      // if (
+      //   !this.howl ||
+      //   (this.howl.state() !== "loaded" && this.howl.state() !== "loading")
+      // ) {
+      //   const src = await getWebviewFilePath(song);
+      //   this.howl = this.initHowl(src!, song);
+      // }
+      // this.howl.volume(this.volume);
 
       if (id && !this.inPlayList(id)) {
         this.playList.push(id);
       }
-      this.howl!.play();
-      this.updateMediaMetadata(song); // 设置播放状态
+      // this.soundId = this.howl!.play();
+      const src = await getWebviewFilePath(song);
+      const audio = new Audio(src);
+      audio.play();
+      this.isPlaying = true;
+      this.playLoading = true;
+      // this.updateMediaMetadata(song); // 设置播放状态
     },
     /** 清空播放信息 */
     clearSongInfo() {

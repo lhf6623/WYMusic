@@ -112,3 +112,32 @@ export async function getImgColor(
     return imgObj?.color;
   });
 }
+
+/** 使用 createObjectURL 获取本地图片地址的缓存地址 */
+export async function getURL(song: SongType) {
+  const src = await getWebviewFilePath(song, "jpg");
+  const img = new Image();
+  img.src = src!;
+  img.crossOrigin = "Anonymous";
+
+  return new Promise<string>((resolve, reject) => {
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      ctx?.drawImage(img, 0, 0);
+      canvas.toBlob(
+        async (blob) => {
+          const src = URL.createObjectURL(blob!);
+          resolve(src);
+        },
+        "image/jpeg",
+        0.5
+      );
+    };
+    img.onerror = () => {
+      reject("图片加载失败");
+    };
+  });
+}

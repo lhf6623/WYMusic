@@ -50,8 +50,3 @@ export async function downloadImages(
 ) {
   return await invoke<SongType[]>("download_img_file", { data });
 }
-
-/** 根据id 获取本地图片的 base64 编码 */
-export async function getImgBase64(id: string) {
-  return await invoke<string>("get_img_base64", { id });
-}

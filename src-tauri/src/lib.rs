@@ -7,8 +7,6 @@
 use serde::Serialize;
 use reqwest::Client;
 use std::path::PathBuf;
-// 在文件顶部添加
-use base64::Engine;
 
 #[derive(serde::Deserialize)]
 pub struct DownloadResources {
@@ -338,52 +336,12 @@ async fn delete_file(id: String) -> Result<(), String> {
     }
     Ok(())
 }
-// 根据id 获取本地图片的 base64 编码
-#[tauri::command]
-async fn get_img_base64(id: String) -> String {
-    // 获取所有图片文件名
-    let jpg_names = get_file_names(None).await;
-    
-    // 查找包含指定id的图片文件名
-    let mut target_jpg_name = None;
-    for name in jpg_names {
-        if name.contains(&id) {
-            target_jpg_name = Some(name);
-            break;
-        }
-    }
-    
-    // 如果找不到图片文件，返回空字符串
-    let jpg_name = match target_jpg_name {
-        Some(name) => name,
-        None => return String::new(),
-    };
-    
-    // 构建完整的图片路径
-    let music_dir = dirs::audio_dir().expect("Could not find music directory");
-    let wy_music_dir = music_dir.join("WYMusic");
-    let jpg_path = wy_music_dir.join(&jpg_name);
-    
-    // 读取图片文件并转换为base64
-    match std::fs::read(&jpg_path) {
-        Ok(image_data) => {
-            // 使用新的base64编码方法
-            let base64_data = base64::engine::general_purpose::STANDARD.encode(image_data);
-            // 添加data URI前缀
-            format!("data:image/jpeg;base64,{}", base64_data)
-        },
-        Err(err) => {
-            eprintln!("Failed to read image file {}: {}", jpg_path.display(), err);
-            String::new()
-        }
-    }
-}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![download_file, delete_file, download_img_file, get_songs, get_img_base64])
+        .invoke_handler(tauri::generate_handler![download_file, delete_file, download_img_file, get_songs])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

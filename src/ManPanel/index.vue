@@ -1,8 +1,10 @@
 <template>
   <div h-330px w-330px relative overflow-hidden>
     <header line-height-40px overflow-hidden w-full z-200 absolute top-0 left-0 font-300 text="sm center" select-none
-      data-tauri-drag-region transition-all :style="{
-        height: settingStore.focused ? '40px' : '0px',
+      data-tauri-drag-region transition-all :class="{
+        'h-40px min-h-40px': settingStore.focused,
+        'h-0px': !settingStore.focused
+      }" :style="{
         background: backgroundColor,
         color: textColor
       }">

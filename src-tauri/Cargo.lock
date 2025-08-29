@@ -5268,7 +5268,6 @@ dependencies = [
 name = "wy-music"
 version = "0.3.5"
 dependencies = [
- "base64 0.21.7",
  "dirs",
  "mp3-metadata",
  "reqwest",
