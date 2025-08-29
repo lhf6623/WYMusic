@@ -7,9 +7,11 @@ import {
 } from "@/tools/api_songs";
 import { deleteFile } from "@/tools/api_local_songs";
 import { versionKey } from "..";
-import { getWebviewFilePath, getURL } from "@/tools";
-import { Howl } from "howler";
 import dayjs from "dayjs";
+import AudioTool from "@/tools/AudioTool";
+import { nextTick } from "vue";
+import { throttle } from "lodash-es";
+
 // 维护所有歌曲的列表，包括本地和网络歌曲，其他歌曲列表保存 id,
 export interface SongStore {
   date: string;
@@ -29,26 +31,15 @@ export interface SongStore {
   timer: number;
   /** 当前播放歌曲信息 */
   currSongId: number | string | null;
-  /** 当前播放的 howl */
-  howl: Howl | null;
-  /** 所有的 howl 列表 TODO: 应该维护十个 */
-  howlArr: {
-    id: string | number;
-    howl: Howl;
-    /** 播放次数 */
-    num: number;
-  }[];
   // 点击播放时，有加载状态
   playLoading: boolean;
-  // URL缓存地址
-  cacheURL: string;
-  // 当前播放 ID
-  soundId: number | null;
+  /** 音频工具 */
+  audioTool: AudioTool | null;
 }
 export const useSongStore = defineStore("song", {
   persist: {
     key: versionKey("song"),
-    omit: ["howl", "howlArr"],
+    omit: ["audioTool"],
   },
   state: (): SongStore => {
     return {
@@ -61,11 +52,8 @@ export const useSongStore = defineStore("song", {
       isPlaying: false,
       timer: 0,
       currSongId: null,
-      howl: null,
-      howlArr: [],
       playLoading: false,
-      cacheURL: "",
-      soundId: null,
+      audioTool: null,
     };
   },
   getters: {
@@ -74,75 +62,6 @@ export const useSongStore = defineStore("song", {
     },
   },
   actions: {
-    setupMediaSession() {
-      if ("mediaSession" in navigator && navigator.mediaSession) {
-        // 播放事件处理
-        navigator.mediaSession.setActionHandler("play", async () => {
-          if (this.currSongId) {
-            await this.play();
-          }
-        });
-
-        // 暂停事件处理
-        navigator.mediaSession.setActionHandler("pause", () => {
-          this.pause();
-        });
-        // 上一首事件处理
-        navigator.mediaSession.setActionHandler("previoustrack", () => {
-          this.playNext("prev");
-        });
-        // 下一首事件处理
-        navigator.mediaSession.setActionHandler("nexttrack", () => {
-          this.playNext("next");
-        });
-        // 调整进度条事件处理
-        navigator.mediaSession.setActionHandler("seekto", (details) => {
-          if (details && details.seekTime !== undefined) {
-            this.setSeek(details.seekTime);
-          }
-        });
-
-        // 设置默认的播放状态
-        navigator.mediaSession.playbackState = "none";
-      }
-    },
-    // 更新媒体会话状态
-    updateMediaSessionState(playing: boolean) {
-      if ("mediaSession" in navigator && navigator.mediaSession) {
-        navigator.mediaSession.playbackState = playing ? "playing" : "paused";
-      }
-    },
-    // 更新媒体元数据
-    async updateMediaMetadata(song: SongType) {
-      if (
-        "mediaSession" in navigator &&
-        navigator.mediaSession &&
-        "MediaMetadata" in window
-      ) {
-        if (this.cacheURL) {
-          URL.revokeObjectURL(this.cacheURL);
-          this.cacheURL = "";
-        }
-        try {
-          this.cacheURL = await getURL(song);
-          const metadata = new MediaMetadata({
-            title: song.name,
-            artist: song.singer.join(", "),
-            album: "WYMusic",
-            artwork: [
-              {
-                src: this.cacheURL,
-                sizes: "1000x1000",
-                type: "image/jpeg",
-              },
-            ],
-          });
-          navigator.mediaSession.metadata = metadata;
-        } catch (error) {
-          console.warn("更新媒体元数据失败:", error);
-        }
-      }
-    },
     // 获取每日歌曲推荐
     async getDailyList() {
       if (this.date == dayjs().format("YYYY-MM-DD") && this.dailyList.length)
@@ -181,8 +100,6 @@ export const useSongStore = defineStore("song", {
 
       this.allList = this.allList.filter((item) => item.id != id);
       this.localList = this.localList.filter((item) => item != id);
-      // 删除 howlArr 中的歌曲
-      this.howlArr = this.howlArr.filter((item) => item.id != id);
     },
     async downSong(id: string | number) {
       const song = this.allList.find((song) => song.id == id);
@@ -203,94 +120,55 @@ export const useSongStore = defineStore("song", {
       }
       return this.allList.find((item) => item.id == id)!;
     },
-    stop() {
-      this.howlArr.forEach((item) => {
-        item.howl.stop();
-      });
-      this.updateMediaSessionState(false);
-    },
     /** 暂停 */
     pause() {
-      this.howl && this.howl.pause();
-      this.updateMediaSessionState(false);
+      this.audioTool && this.audioTool.pause();
     },
     /** 设置播放进度 */
     setSeek(num: number) {
       this.timer = num;
-      if (this.howl) {
-        this.howl.seek(num);
-      }
+      this.audioTool && this.audioTool.setSeek(num);
     },
-    addHowl(song: SongType, howl: Howl) {
-      const howlInfo = this.howlArr.find((item) => item.id == song.id);
-      if (howlInfo) {
-        howlInfo.num += 1;
-        // 如果有的话就更新，发现应用长时间挂起，播放声音会没有
-        howlInfo.howl = howl;
-      } else {
-        if (this.howlArr.length >= 10) {
-          // 移除播放次数最少的, 如果有多个最少的, 移除第一个
-          const minNum = this.howlArr.reduce((pre, cur) => {
-            return pre.num < cur.num ? pre : cur;
-          }).num;
-          const index = this.howlArr.findIndex((item) => item.num == minNum);
-          if (index != -1) {
-            this.howlArr.splice(index, 1);
-          }
-        }
-        this.howlArr.push({
-          id: song.id,
-          howl,
-          num: 1,
-        });
+    async initAudioTool() {
+      if (this.audioTool) {
+        return this.audioTool;
       }
-    },
-    getHowl(id: number | string) {
-      const howlInfo = this.howlArr.find((item) => item.id == id);
-      if (howlInfo) {
-        howlInfo.num += 1;
-      }
-      return howlInfo?.howl;
-    },
-    /** 初始化 howl */
-    initHowl(src: string, song: SongType) {
-      this.isPlaying = false;
-      const howl = new Howl({
-        src: src,
-        html5: true,
+      this.audioTool = new AudioTool({
         onplay: () => {
-          this.isPlaying = this.howl!.playing();
+          this.isPlaying = true;
           this.playLoading = false;
-          this.updateMediaSessionState(true);
-          // 更新播放时间
-          requestAnimationFrame(this.step.bind(this));
-        },
-        onend: () => {
-          howl.stop();
-          this.playNext("next");
         },
         onpause: () => {
           this.isPlaying = false;
         },
-        onstop: () => {
+        onended: () => {
           this.isPlaying = false;
         },
-        onseek: () => {
-          requestAnimationFrame(this.step.bind(this));
-        },
+        ontimeupdate: throttle((e) => {
+          this.timer = (e.target as HTMLAudioElement).currentTime;
+          if (this.timer === (e.target as HTMLAudioElement).duration) {
+            this.playNext("next");
+          }
+        }, 800),
       });
-      this.addHowl(song, howl);
-      howl.volume(this.volume);
-      howl.seek(this.timer);
-      return howl;
-    },
-    /** 播放进度 */
-    step() {
-      const self = this;
-      this.timer = self.howl?.seek() || 0;
-      if (self.howl?.playing()) {
-        requestAnimationFrame(self.step.bind(self));
-      }
+      // audio 事件初始化，
+      this.audioTool.initMediaSession({
+        onprevioustrack: () => {
+          this.playNext("prev");
+        },
+        nexttrack: () => {
+          this.playNext("next");
+        },
+        onseekto: throttle((e: MediaSessionActionDetails) => {
+          if (e && e.seekTime !== undefined) {
+            this.setSeek(e.seekTime);
+          }
+        }, 300),
+      });
+
+      await nextTick();
+
+      return this.audioTool.audio;
     },
     async play(id?: number | string) {
       this.playLoading = true;
@@ -303,35 +181,18 @@ export const useSongStore = defineStore("song", {
         throw new Error("播放歌曲为空");
       }
       const song = await this.downSong(this.currSongId);
-      // this.howl = this.getHowl(this.currSongId)!;
-      // if (
-      //   !this.howl ||
-      //   (this.howl.state() !== "loaded" && this.howl.state() !== "loading")
-      // ) {
-      //   const src = await getWebviewFilePath(song);
-      //   this.howl = this.initHowl(src!, song);
-      // }
-      // this.howl.volume(this.volume);
 
       if (id && !this.inPlayList(id)) {
         this.playList.push(id);
       }
-      // this.soundId = this.howl!.play();
-      const src = await getWebviewFilePath(song);
-      const audio = new Audio(src);
-      audio.play();
-      this.isPlaying = true;
-      this.playLoading = true;
-      // this.updateMediaMetadata(song); // 设置播放状态
+      this.audioTool?.setSeek(this.timer);
+      this.audioTool?.play(song);
+      this.playLoading = false;
     },
     /** 清空播放信息 */
     clearSongInfo() {
-      if (this.howl) {
-        this.howl.stop();
-      }
       this.timer = 0;
       this.currSongId = null;
-      this.howl = null;
     },
     inPlayList(id: number | string | null) {
       return !!this.playList.find((item) => item == id);
@@ -374,7 +235,6 @@ export const useSongStore = defineStore("song", {
       if (nextIndex >= this.playList.length) {
         nextIndex = 0;
       }
-      this.stop();
       this.timer = 0;
       this.play(this.playList[nextIndex]);
     },

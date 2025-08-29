@@ -183,11 +183,12 @@ function offHandle() {
     songStore.volume = oldVolume;
   }
 
-  songStore.howl?.volume(songStore.volume);
+
+  songStore.audioTool?.volume(songStore.volume);
 }
 
 watch(() => songStore.volume, () => {
-  songStore.howl?.volume(songStore.volume);
+  songStore.audioTool?.volume(songStore.volume);
 })
 const isShowRange = ref(false);
 

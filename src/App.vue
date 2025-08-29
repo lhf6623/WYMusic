@@ -21,6 +21,7 @@ onMounted(async () => {
   songStore.isPlaying = false;
 
   getSongs("").then(songList => {
+    console.log(`🚀 ~ songList:`, songList);
     songStore.localList = songList.map(item => item.id);
     songStore.updateAllList(songList);
   })

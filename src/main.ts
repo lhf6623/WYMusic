@@ -19,8 +19,6 @@ app.mount("#app");
   if (!settingStore.localAudioDir) {
     settingStore.localAudioDir = await settingStore.getDefaultAudioDir();
   }
-  setTimeout(() => {
-    const songStore = useSongStore();
-    songStore.setupMediaSession();
-  }, 0);
+  const songStore = useSongStore();
+  songStore.initAudioTool();
 })();
