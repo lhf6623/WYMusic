@@ -8,7 +8,6 @@
 import { useTemplateRef, onUnmounted, nextTick, computed, watch, onMounted } from 'vue';
 import { useSongStore } from "@/store/module/song";
 import { useSettingStore } from "@/store/module/setting";
-import { Howler } from "howler"
 
 const songStore = useSongStore();
 const settingStore = useSettingStore();
@@ -17,7 +16,7 @@ let audioContext: AudioContext | null = null;
 let analyser: AnalyserNode | null = null;
 let animationId: number | null = null;
 let cleanup: (() => void) | undefined = undefined;
-let gainNode: GainNode | null = null;
+let source: MediaElementAudioSourceNode | null = null;
 
 
 // 条纹顶部色
@@ -30,19 +29,26 @@ const stripeTopColor = computed(() => {
 
 // 初始化音频分析器
 const initAudioAnalyser = () => {
-  if (!Howler.ctx) return;
-
+  if (!songStore.audioTool?.audio) return;
   try {
-    audioContext = Howler.ctx
+    audioContext = new AudioContext();
+    if (audioContext.state === 'suspended') {
+      audioContext.resume();
+    }
+    if (!source) {
+      source = audioContext.createMediaElementSource(songStore.audioTool.audio);
+
+    }
+
     // 创建独立增益节点
-    gainNode = audioContext.createGain();
-    gainNode.gain.value = 1.0; // 明确设置增益值
+    // gainNode = audioContext.createGain();
+    // gainNode.gain.value = 1.0; // 明确设置增益值
 
     analyser = audioContext.createAnalyser();
-    Howler.masterGain.disconnect();
-    Howler.masterGain.connect(gainNode);
-    gainNode.connect(analyser);
-    gainNode.connect(audioContext.destination);
+    source.connect(analyser);
+    analyser.connect(audioContext.destination);
+    // gainNode.connect(analyser);
+    // gainNode.connect(audioContext.destination);
 
     analyser.fftSize = 256; // 控制频率数据的数量
   } catch (error) {
@@ -109,11 +115,9 @@ const drawVisualization = () => {
       cancelAnimationFrame(animationId);
       animationId = null
     }
-    if (gainNode) {
-      Howler.masterGain.disconnect();
-      gainNode.disconnect();
-      Howler.masterGain.connect(Howler.ctx.destination);
-    }
+    // if (gainNode) {
+    //   // gainNode.disconnect();
+    // }
     /** 清空画布中的内容 */
     if (ctx) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -121,29 +125,19 @@ const drawVisualization = () => {
   };
 };
 
-watch(() => songStore.isPlaying, () => {
-  if (songStore.isPlaying) {
-    init()
-  } else {
-    cleanup?.();
-  }
-})
-
 const init = async () => {
   await nextTick();
   if (cleanup) {
     cleanup()
   }
-  initAudioAnalyser();
   setTimeout(() => {
     cleanup = drawVisualization()
   }, 0);
 }
-onMounted(() => {
-  if (songStore.howl?.playing()) {
-    init()
-  }
-})
+
+watch(() => songStore.isPlaying, init)
+
+onMounted(initAudioAnalyser)
 onUnmounted(() => {
   cleanup?.();
 });
