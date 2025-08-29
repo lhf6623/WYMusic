@@ -11,9 +11,6 @@ importers:
       '@tauri-apps/api':
         specifier: ^2.6.0
         version: 2.6.0
-      '@types/howler':
-        specifier: ^2.2.12
-        version: 2.2.12
       '@types/node':
         specifier: ^24.0.12
         version: 24.0.12
@@ -26,9 +23,6 @@ importers:
       dayjs:
         specifier: ^1.11.13
         version: 1.11.13
-      howler:
-        specifier: ^2.2.4
-        version: 2.2.4
       lodash-es:
         specifier: ^4.17.21
         version: 4.17.21
@@ -784,9 +778,6 @@ packages:
   '@types/estree@1.0.8':
     resolution: {integrity: sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==}
 
-  '@types/howler@2.2.12':
-    resolution: {integrity: sha512-hy769UICzOSdK0Kn1FBk4gN+lswcj1EKRkmiDtMkUGvFfYJzgaDXmVXkSShS2m89ERAatGIPnTUlp2HhfkVo5g==}
-
   '@types/katex@0.16.7':
     resolution: {integrity: sha512-HMwFiRujE5PjrgwHQ25+bsLJgowjGjm5Z8FVSf0N6PwgJrwxH0QxzHYDcKsTfV3wva0vzrpqMTJS2jXPr5BMEQ==}
 
@@ -1485,9 +1476,6 @@ packages:
 
   hookable@5.5.3:
     resolution: {integrity: sha512-Yc+BQe8SvoXH1643Qez1zqLRmbA5rCL+sSmk6TVos0LWVfNIB7PGncdlId77WzLGSIB5KaWgTaNTs2lNVEI6VQ==}
-
-  howler@2.2.4:
-    resolution: {integrity: sha512-iARIBPgcQrwtEr+tALF+rapJ8qSc+Set2GJQl7xT1MQzWaVkFebdJhR3alVlSiUf5U7nAANKuj3aWpwerocD5w==}
 
   http-errors@2.0.0:
     resolution: {integrity: sha512-FtwrG/euBzaEjYeRqOgly7G0qviiXoJWnvEH2Z1plBdXgbyjv34pHTSb9zoeHMyDy33+DWy5Wt9Wo+TURtOYSQ==}
@@ -2840,8 +2828,6 @@ snapshots:
   '@types/estree@1.0.8':
     optional: true
 
-  '@types/howler@2.2.12': {}
-
   '@types/katex@0.16.7': {}
 
   '@types/lodash-es@4.17.12':
@@ -3695,8 +3681,6 @@ snapshots:
   highlight.js@11.11.1: {}
 
   hookable@5.5.3: {}
-
-  howler@2.2.4: {}
 
   http-errors@2.0.0:
     dependencies:

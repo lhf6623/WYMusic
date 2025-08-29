@@ -144,10 +144,16 @@ export const useSongStore = defineStore("song", {
         onended: () => {
           this.isPlaying = false;
         },
-        ontimeupdate: throttle((e) => {
-          this.timer = (e.target as HTMLAudioElement).currentTime;
-          if (this.timer === (e.target as HTMLAudioElement).duration) {
-            this.playNext("next");
+        ontimeupdate: throttle(() => {
+          if (this.audioTool?.audio) {
+            this.timer = this.audioTool.audio.currentTime || 0;
+            console.log(
+              `🚀 ~ this.audioTool!.audio!.currentTime:`,
+              this.audioTool.audio.currentTime
+            );
+            if (this.timer === this.audioTool.audio.duration) {
+              this.playNext("next");
+            }
           }
         }, 800),
       });

@@ -11,12 +11,10 @@
   },
   "dependencies": {
     "@tauri-apps/api": "^2.6.0",
-    "@types/howler": "^2.2.12",
     "@types/node": "^24.0.12",
     "@unocss/reset": "^66.3.3",
     "NeteaseCloudMusicApi": "^4.27.0",
     "dayjs": "^1.11.13",
-    "howler": "^2.2.4",
     "lodash-es": "^4.17.21",
     "pinia": "^3.0.3",
     "pinia-plugin-persistedstate": "^4.4.1",
