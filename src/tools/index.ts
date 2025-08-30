@@ -14,7 +14,9 @@ export async function getWebviewFilePath(
   const fileName = getSongName(song, suffixType);
   const audioPath = await audioDir();
   const filePath = await join(audioPath, "WYMusic", fileName);
-  const url = convertFileSrc(filePath);
+  const url = convertFileSrc(filePath, "asset");
+
+  console.log("getWebviewFilePath", url);
 
   // 测试是否可用
   try {
