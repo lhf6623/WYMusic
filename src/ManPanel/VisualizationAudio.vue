@@ -5,18 +5,15 @@
 </template>
 
 <script setup lang="ts">
-import { useTemplateRef, onUnmounted, nextTick, computed, watch, onMounted } from 'vue';
+import { useTemplateRef, onUnmounted, computed, watchPostEffect } from 'vue';
 import { useSongStore } from "@/store/module/song";
 import { useSettingStore } from "@/store/module/setting";
 
 const songStore = useSongStore();
 const settingStore = useSettingStore();
 const canvasRef = useTemplateRef<HTMLCanvasElement>('canvasRef');
-let audioContext: AudioContext | null = null;
-let analyser: AnalyserNode | null = null;
 let animationId: number | null = null;
 let cleanup: (() => void) | undefined = undefined;
-let source: MediaElementAudioSourceNode | null = null;
 
 
 // 条纹顶部色
@@ -27,38 +24,10 @@ const stripeTopColor = computed(() => {
   return `rgb(${255 - r}, ${255 - g}, ${255 - b})`
 })
 
-// 初始化音频分析器
-const initAudioAnalyser = () => {
-  if (!songStore.audioTool?.audio) return;
-  try {
-    audioContext = new AudioContext();
-    if (audioContext.state === 'suspended') {
-      audioContext.resume();
-    }
-    if (!source) {
-      source = audioContext.createMediaElementSource(songStore.audioTool.audio);
-
-    }
-
-    // 创建独立增益节点
-    // gainNode = audioContext.createGain();
-    // gainNode.gain.value = 1.0; // 明确设置增益值
-
-    analyser = audioContext.createAnalyser();
-    source.connect(analyser);
-    analyser.connect(audioContext.destination);
-    // gainNode.connect(analyser);
-    // gainNode.connect(audioContext.destination);
-
-    analyser.fftSize = 256; // 控制频率数据的数量
-  } catch (error) {
-    console.error('音频可视化初始化失败:', error);
-  }
-};
-
 // 绘制音频可视化条纹
 const drawVisualization = () => {
-  if (!canvasRef.value || !analyser) return;
+  if (!canvasRef.value || !songStore.audioTool?.analyser) return;
+  const analyser = songStore.audioTool?.analyser
 
   const canvas = canvasRef.value;
   const ctx = canvas.getContext('2d');
@@ -68,6 +37,7 @@ const drawVisualization = () => {
   canvas.width = canvas.offsetWidth;
   canvas.height = canvas.offsetHeight;
 
+  analyser.fftSize = 256; // 控制频率数据的数量
   const bufferLength = analyser.frequencyBinCount;
   const dataArray = new Uint8Array(bufferLength);
 
@@ -115,29 +85,19 @@ const drawVisualization = () => {
       cancelAnimationFrame(animationId);
       animationId = null
     }
-    // if (gainNode) {
-    //   // gainNode.disconnect();
-    // }
-    /** 清空画布中的内容 */
     if (ctx) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
   };
 };
 
-const init = async () => {
-  await nextTick();
-  if (cleanup) {
-    cleanup()
-  }
-  setTimeout(() => {
+watchPostEffect(() => {
+  if (cleanup) { cleanup?.() }
+  if (songStore.isPlaying) {
     cleanup = drawVisualization()
-  }, 0);
-}
+  }
+})
 
-watch(() => songStore.isPlaying, init)
-
-onMounted(initAudioAnalyser)
 onUnmounted(() => {
   cleanup?.();
 });

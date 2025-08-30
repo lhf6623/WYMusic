@@ -5,13 +5,14 @@
         <SongList :list="songStore.playList" type="playList" :activeType="active" @clear="clearList"></SongList>
       </NTabPane>
       <NTabPane v-if="settingStore.testApiAudioUrl" name="dailyList" tab="每日" display-directive="show:lazy">
-        <SongList :list="songStore.dailyList" type="dailyList" :activeType="active" @playAll="playAll"></SongList>
+        <SongList :list="songStore.dailyList" :loaging="dailyLoading" type="dailyList" :activeType="active"
+          @playAll="playAll"></SongList>
       </NTabPane>
       <NTabPane name="localList" tab="本地" display-directive="show:lazy">
         <SongList :list="songStore.localList" type="localList" :activeType="active" @playAll="playAll"></SongList>
       </NTabPane>
       <NTabPane v-if="settingStore.testApiAudioUrl" name="search" tab="搜索" display-directive="show:lazy">
-        <SongList :list="searchList" :loaging="loaging" type="search" :activeType="active" @search="handleSearch">
+        <SongList :list="searchList" :loaging="searchLoaging" type="search" :activeType="active" @search="handleSearch">
         </SongList>
       </NTabPane>
     </NTabs>
@@ -34,7 +35,8 @@ const songStore = useSongStore();
 const userStore = useUserStore();
 const settingStore = useSettingStore();
 const active = ref<TabsType>("playList");
-const loaging = ref(false);
+const searchLoaging = ref(false);
+const dailyLoading = ref(false);
 const menuData = reactive<{
   x: number,
   y: number,
@@ -108,6 +110,9 @@ function showMenu(songId: number | string | null, x: number, y: number, show: bo
   menuData.y = y;
   menuData.show = show;
 }
+watch(() => settingStore.showBottomPanel, () => {
+  showMenu(null, 0, 0, false)
+})
 provide(menuKey, {
   menuOperate,
   menuData: computed(() => ({ ...menuData })).value,
@@ -133,7 +138,10 @@ async function handleTabChange(value: TabsType) {
   active.value = value;
   if (value == 'dailyList' && !songStore.dailyList.length) {
     // 每日推荐
-    songStore.getDailyList()
+    dailyLoading.value = true
+    songStore.getDailyList().then(() => {
+      dailyLoading.value = false
+    })
   }
 
   if (value == 'playList' && isLogin) {
@@ -153,10 +161,10 @@ function handleSearch(value: string) {
     searchList.value = [];
     return;
   }
-  loaging.value = true;
+  searchLoaging.value = true;
   search(query).then((search_list) => {
 
-    loaging.value = false;
+    searchLoaging.value = false;
     searchList.value = search_list.map(item => item.id)
     songStore.updateAllList(search_list)
   });

@@ -72,11 +72,6 @@
         </NInputGroup>
       </p>
     </li>
-    <!-- 不聚焦时是否展示 titleHead 和 Control -->
-    <li flex justify-between>
-      <span>专注模式：</span>
-      <NSwitch size="small" v-model:value="settingStore.focusMode"></NSwitch>
-    </li>
   </ul>
 </template>
 

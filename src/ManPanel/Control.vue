@@ -80,7 +80,7 @@
 
 <script setup lang="tsx">
 import type { SliderProps } from "naive-ui";
-import { ref, watch, computed, useTemplateRef, onMounted } from "vue";
+import { ref, computed, useTemplateRef, watchPostEffect } from "vue";
 import { useSettingStore } from "@/store/module/setting";
 import { useSongStore } from "@/store/module/song";
 import { useUserStore } from "@/store/module/user";
@@ -109,21 +109,16 @@ const textColor = computed(() => {
 
 const user_title = computed(() => {
   if (userStore.cookie) {
-
     return userStore.profile?.nickname ? userStore.profile?.nickname : "游客"
   }
   return '未登入'
 })
 
-onMounted(() => {
+
+watchPostEffect(throttle(() => {
   drag.value = songStore.timer;
-});
-
-const setDrag = throttle((val) => {
-  drag.value = val;
-}, 1000);
-watch(() => songStore.timer, setDrag);
-
+  !store.focused && popoverRef.value?.setShow(false);
+}, 800))
 
 function dragEnd() {
   songStore.setSeek(drag.value || 0);
@@ -182,25 +177,11 @@ function offHandle() {
   } else {
     songStore.volume = oldVolume;
   }
-
-
   songStore.audioTool?.volume(songStore.volume);
 }
-
-watch(() => songStore.volume, () => {
-  songStore.audioTool?.volume(songStore.volume);
-})
 const isShowRange = ref(false);
 
 function updateShow(value: boolean) {
   isShowRange.value = value;
 }
-
-watch(
-  () => store.focused,
-  (data) => {
-    !data && popoverRef.value?.setShow(false);
-  },
-  { deep: true }
-);
 </script>

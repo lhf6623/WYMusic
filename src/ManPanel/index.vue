@@ -39,10 +39,10 @@
       <LyricPanel z-30></LyricPanel>
     </div>
     <!-- 展示音频可视化 -->
-    <!-- <div absolute bottom-0px left-0 wfull z-60 v-if="settingStore.showAudioVisualization"
+    <div absolute bottom-0px left-0 wfull z-60 v-if="settingStore.showAudioVisualization"
       :class="{ 'bottom-70px': settingStore.focused }">
       <VisualizationAudio></VisualizationAudio>
-    </div> -->
+    </div>
     <Control></Control>
   </div>
 </template>
@@ -52,8 +52,8 @@ import { useSettingStore } from "@/store/module/setting"
 import { useSongStore } from "@/store/module/song"
 import Control from "./Control.vue";
 import LyricPanel from "./LyricPanel.vue";
-import { computed, onMounted, ref, watch } from "vue";
-// import VisualizationAudio from "./VisualizationAudio.vue";
+import { computed, ref, watchEffect } from "vue";
+import VisualizationAudio from "./VisualizationAudio.vue";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useMessage, useLoadingBar } from "naive-ui";
 import { window as tauriWindow } from "@tauri-apps/api";
@@ -87,16 +87,12 @@ function minWindow() {
   tauriWindow.getCurrentWindow().minimize();
 }
 
-const get_pic_url = async () => {
-
-  let url = (await getWebviewFilePath(songStore.currSong, 'jpg')) ?? ''
+watchEffect(async () => {
+  const url = (await getWebviewFilePath(songStore.currSong, 'jpg')) ?? ''
   pic_url.value = url;
 
   url && settingStore.setMainColor(url)
-}
-watch(() => songStore.currSongId, get_pic_url, { deep: true })
-
-onMounted(get_pic_url)
+})
 
 const app = getCurrentWindow();
 

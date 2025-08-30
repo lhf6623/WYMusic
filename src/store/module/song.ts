@@ -9,12 +9,10 @@ import { deleteFile } from "@/tools/api_local_songs";
 import { versionKey } from "..";
 import dayjs from "dayjs";
 import AudioTool from "@/tools/AudioTool";
-import { nextTick } from "vue";
 import { throttle } from "lodash-es";
 
 // 维护所有歌曲的列表，包括本地和网络歌曲，其他歌曲列表保存 id,
 export interface SongStore {
-  date: string;
   // 所有歌曲列表,维护一个列表，之后所有的请求都要存到这里
   allList: SongType[];
   // 本地歌曲列表
@@ -23,6 +21,8 @@ export interface SongStore {
   playList: (string | number)[];
   // 每日推荐
   dailyList: (string | number)[];
+  // 每日推荐，一天只请求一次
+  dailyListDate: string;
   /** 播放声音大小 */
   volume: number;
   /** 播放状态 */
@@ -43,7 +43,7 @@ export const useSongStore = defineStore("song", {
   },
   state: (): SongStore => {
     return {
-      date: "",
+      dailyListDate: "",
       allList: [],
       localList: [],
       dailyList: [],
@@ -64,9 +64,12 @@ export const useSongStore = defineStore("song", {
   actions: {
     // 获取每日歌曲推荐
     async getDailyList() {
-      if (this.date == dayjs().format("YYYY-MM-DD") && this.dailyList.length)
+      if (
+        this.dailyListDate == dayjs().format("YYYY-MM-DD") &&
+        this.dailyList.length
+      )
         return;
-      this.date = dayjs().format("YYYY-MM-DD");
+      this.dailyListDate = dayjs().format("YYYY-MM-DD");
       const list = await getRecommendSongs();
       this.updateAllList(list);
       this.dailyList = list.map((item) => item.id);
@@ -147,11 +150,9 @@ export const useSongStore = defineStore("song", {
         ontimeupdate: throttle(() => {
           if (this.audioTool?.audio) {
             this.timer = this.audioTool.audio.currentTime || 0;
-            console.log(
-              `🚀 ~ this.audioTool!.audio!.currentTime:`,
-              this.audioTool.audio.currentTime
-            );
-            if (this.timer === this.audioTool.audio.duration) {
+            this.audioTool.currentTime = this.timer;
+
+            if (this.timer >= this.audioTool.audio.duration) {
               this.playNext("next");
             }
           }
@@ -171,10 +172,6 @@ export const useSongStore = defineStore("song", {
           }
         }, 300),
       });
-
-      await nextTick();
-
-      return this.audioTool.audio;
     },
     async play(id?: number | string) {
       this.playLoading = true;
@@ -199,6 +196,9 @@ export const useSongStore = defineStore("song", {
     clearSongInfo() {
       this.timer = 0;
       this.currSongId = null;
+      this.audioTool?.clearMediaSession();
+      this.audioTool?.updateMediaSessionState(false);
+      this.audioTool?.pause();
     },
     inPlayList(id: number | string | null) {
       return !!this.playList.find((item) => item == id);
@@ -206,13 +206,12 @@ export const useSongStore = defineStore("song", {
     /** 删除播放列表 */
     removePlayList(ids: number | string | (number | string)[]) {
       const _ids = Array.isArray(ids) ? ids : [ids];
-
-      this.playList = this.playList.filter(
-        (item) => !_ids.find((id) => id == item)
-      );
       if (this.currSong && _ids.find((item) => item == this.currSong?.id)) {
         this.clearSongInfo();
       }
+      this.playList = this.playList.filter(
+        (item) => !_ids.find((id) => id == item)
+      );
     },
     /** 添加到播放列表 不播放 */
     addPlayList(ids: number | string | (number | string)[]) {

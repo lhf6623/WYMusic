@@ -20,8 +20,6 @@ export interface SettingStore {
   apiAudioUrl: string;
   /** 展示音频可视化面板 */
   showAudioVisualization: boolean;
-  /** 专注模式 */
-  focusMode: boolean;
   /** 测试 apiAudioUrl 地址是否有效 */
   testApiAudioUrl: boolean;
   /** 窗口置顶 */
@@ -41,7 +39,6 @@ export const useSettingStore = defineStore("setting", {
       localAudioDir: "",
       apiAudioUrl: import.meta.env.VITE_API_AUDIO_URL,
       showAudioVisualization: true,
-      focusMode: true,
       testApiAudioUrl: false,
       windowTop: false,
     };

@@ -23,9 +23,18 @@ export default class AudioTool {
   cacheURL: string = "";
   currentTime: number = 0;
   mediaSessionOpt: MediaSessionOpt | null = null;
+  ctx: AudioContext | null = null;
+  source: MediaElementAudioSourceNode | null = null;
+  analyser: AnalyserNode | null = null;
   constructor(opt: AudioToolOpt) {
     this.opt = opt;
     this.audio = new Audio();
+    this.ctx = new AudioContext();
+    this.source = this.ctx.createMediaElementSource(this.audio);
+    this.analyser = this.ctx.createAnalyser();
+
+    this.source.connect(this.analyser);
+    this.analyser.connect(this.ctx.destination);
 
     this.audio.addEventListener("play", this.opt.onplay);
     this.audio.addEventListener("pause", this.opt.onpause);
@@ -89,7 +98,7 @@ export default class AudioTool {
       const metadata = new MediaMetadata({
         title: song.name,
         artist: song.singer.join(", "),
-        album: "WYMusic",
+        album: "wy-music",
         artwork: [
           {
             src: this.cacheURL,
@@ -135,16 +144,13 @@ export default class AudioTool {
       this.updateMediaSessionState(false);
     });
     // 上一首事件处理
-    navigator.mediaSession.setActionHandler("previoustrack", () => {
-      opt.onprevioustrack();
-    });
+    navigator.mediaSession.setActionHandler(
+      "previoustrack",
+      opt.onprevioustrack
+    );
     // 下一首事件处理
-    navigator.mediaSession.setActionHandler("nexttrack", () => {
-      opt.nexttrack();
-    });
+    navigator.mediaSession.setActionHandler("nexttrack", opt.nexttrack);
     // 调整进度条事件处理
-    navigator.mediaSession.setActionHandler("seekto", (e) => {
-      opt.onseekto(e);
-    });
+    navigator.mediaSession.setActionHandler("seekto", opt.onseekto);
   }
 }

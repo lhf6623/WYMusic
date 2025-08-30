@@ -15,7 +15,8 @@
         <p w30px text-center>#</p>
         <div flex flex-1 gap-6px justify-between>
           <span v-if="type == 'search'">标题</span>
-          <NInput v-else size="tiny" placeholder="标题" clearable v-model:value="filterInput" :bordered="false"></NInput>
+          <NInput v-else size="tiny" placeholder="搜索标题" clearable v-model:value="filterInput" :bordered="false">
+          </NInput>
           <div>
             <NButton @click="clearList" text v-show="type === 'playList'">
               <template #icon>
@@ -32,8 +33,7 @@
           </div>
         </div>
       </div>
-      <Song v-for="(id, index) in list" :index="index" :key="id" :songId="id" :type="type" :active="song_list_active"
-        @setActive="setActive">
+      <Song v-for="(id, index) in list" :index="index" :key="id" :songId="id" :type="type">
       </Song>
     </div>
     <!-- 定位按钮 阴影 -->
@@ -69,7 +69,6 @@ const emit = defineEmits<{
   clear: [];
   playAll: [];
 }>()
-const song_list_active = ref<null | number>(null);
 
 const selectValue = ref('');
 const filterInput = ref('')
@@ -90,10 +89,6 @@ const list = computed(() => {
 
 function handleSubmit() {
   emit('search', selectValue.value)
-}
-
-function setActive(i: number) {
-  song_list_active.value = i;
 }
 async function playAll() {
   emit('playAll')

@@ -1,19 +1,12 @@
 <template>
-  <div hover="bg-#e2e8fe" :data-id="`${props.type}_${songId}`" ref="songRef"
-    class="group flex cursor-pointer select-none" @click="setActive(props.index)" @dblclick="play()"
-    :class="active == props.index ? 'bg-#e2e8fe' : ''">
+  <div hover="bg-#e2e8fe" :data-id="`${type}_${songId}`" ref="songRef" class="group flex cursor-pointer select-none"
+    @dblclick="play()" :class="songId == songStore.currSongId ? 'bg-#e2e8fe' : ''">
     <p w30px flex-shrink-0 flex-center text="#8990a2" cursor-pointer>
-      <span v-if="songStore.currSong?.id != props.songId" inline-block group-hover:hidden>
-        {{ (props.index + 1).toString().padStart(2, "0") }}
+      <span v-if="songStore.currSong?.id != songId">
+        <span inline-block group-hover-hidden>{{ index + 1 }}</span>
+        <span text-2xl hidden group-hover-inline-block i-mdi-play @click="play()"></span>
       </span>
-      <span v-if="songStore.currSong?.id != props.songId" text-2xl
-        :class="songStore.currSong?.id != props.songId ? 'hidden' : ''" group-hover:inline-block i-mdi:play
-        @click="play()"></span>
-
-      <span v-if="songStore.currSong?.id == props.songId && !songStore.isPlaying" text-2xl i-mdi:play
-        @click="play()"></span>
-      <span v-if="songStore.currSong?.id == props.songId && songStore.isPlaying" text-2xl i-mdi:pause text-16px
-        @click="play()"></span>
+      <span v-else :class="songStore.isPlaying ? 'i-mdi-pause' : 'i-mdi-play'" text-2xl @click="play()"></span>
     </p>
     <div flex w300px overflow-hidden text="#283248" items-center h50px relative>
       <NImage preview-disabled :src="pic_url" w40px h40px rounded mr4px />
@@ -55,13 +48,9 @@ const { showMenu } = useMenuInject()
 const songRef = useTemplateRef<HTMLDivElement>('songRef')
 
 const props = defineProps<{
-  active: number | null;
   index: number;
   songId: number | string,
   type: string
-}>();
-const emit = defineEmits<{
-  (e: "setActive", index: number): void;
 }>();
 
 const song = computed(() => {
@@ -119,8 +108,5 @@ async function play() {
 
   songStore.addPlayList(props.songId);
   songStore.play(props.songId);
-}
-function setActive(i: number) {
-  emit("setActive", i);
 }
 </script>

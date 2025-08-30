@@ -2,7 +2,7 @@
 
 import { useSettingStore } from "@/store/module/setting";
 import { useSongStore } from "@/store/module/song";
-import { onMounted, watch } from "vue";
+import { onMounted, watchEffect } from "vue";
 import { zhCN, dateZhCN } from "naive-ui";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { LogicalSize } from "@tauri-apps/api/dpi";
@@ -21,19 +21,15 @@ onMounted(async () => {
   songStore.isPlaying = false;
 
   getSongs("").then(songList => {
-    console.log(`🚀 ~ songList:`, songList);
     songStore.localList = songList.map(item => item.id);
     songStore.updateAllList(songList);
   })
   settingStore.updateWindowTop(settingStore.windowTop)
 });
 
-watch(
-  () => settingStore.showBottomPanel,
-  (showBottomPanel) => {
-    app.setSize(new LogicalSize(330, showBottomPanel ? 660 : 330));
-  },
-);
+watchEffect(() => {
+  app.setSize(new LogicalSize(330, settingStore.showBottomPanel ? 660 : 330));
+});
 </script>
 
 <template>

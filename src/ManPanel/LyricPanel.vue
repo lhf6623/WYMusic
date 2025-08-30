@@ -5,32 +5,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, computed } from 'vue';
+import { ref, computed, watchPostEffect } from 'vue';
 import { useSongStore } from "@/store/module/song";
 import { useSettingStore } from '@/store/module/setting';
 
 const songStore = useSongStore();
 const settingStore = useSettingStore()
 const lyric_all_text = ref<{ time: number, text: string }[]>([]);
-
-// 处理歌词
-async function get_lyric_text() {
-  if (!songStore.currSong) {
-    lyric_all_text.value = []
-    return;
-  }
-  let text = ''
-  if (songStore.currSong.lyric) {
-    text = songStore.currSong.lyric
-  }
-
-  lyric_all_text.value = text.split('\n').filter(Boolean).map(item => {
-    return {
-      time: timeToSeconds(item),
-      text: item.replace(/\[(.*?)\]/, '') || '',
-    }
-  })
-}
 
 const showPanel = computed(() => {
   return !!songStore.currSong ? 'block' : 'none'
@@ -55,9 +36,19 @@ const lyric_text = computed(() => {
   })
 })
 
-onMounted(get_lyric_text)
+watchPostEffect(() => {
+  if (!songStore.currSong || !songStore.currSong.lyric) {
+    lyric_all_text.value = []
+    return;
+  }
 
-watch(() => songStore.currSongId, get_lyric_text, { deep: true })
+  lyric_all_text.value = songStore.currSong.lyric.split('\n').filter(Boolean).map(item => {
+    return {
+      time: timeToSeconds(item),
+      text: item.replace(/\[(.*?)\]/, '') || '',
+    }
+  })
+})
 
 function timeToSeconds(timeString: string) {
 
