@@ -20,7 +20,8 @@ type MediaSessionOpt = {
 export default class AudioTool {
   private opt: AudioToolOpt;
   audio: HTMLAudioElement | null = null;
-  cacheURL: string = "";
+  imgCacheURL: string = "";
+  mp3CacheURL: string = "";
   currentTime: number = 0;
   mediaSessionOpt: MediaSessionOpt | null = null;
   ctx: AudioContext | null = null;
@@ -43,29 +44,32 @@ export default class AudioTool {
   }
   /** 播放 */
   async play(song?: SongType) {
-    if (this.audio) {
-      const src = await getWebviewFilePath(song);
+    if (!this.audio) throw new Error("初始化");
 
-      if (src && this.audio.src != src) {
-        this.audio.src = src;
-        console.log("test", src);
+    const src = await getWebviewFilePath(song);
 
-        this.audio.load();
+    if (src && this.audio.src != src) {
+      this.audio.src = src;
+      if (this.mp3CacheURL) {
+        URL.revokeObjectURL(this.mp3CacheURL);
       }
+      this.mp3CacheURL = src;
 
-      this.setSeek(this.currentTime);
-      this.audio!.play()
-        .then(() => {
-          if (song) {
-            this.updateMediaMetadata(song);
-            this.initMediaSession(this.mediaSessionOpt!);
-          }
-          this.updateMediaSessionState(true);
-        })
-        .catch(() => {
-          this.updateMediaSessionState(false);
-        });
+      this.audio.load();
     }
+
+    this.setSeek(this.currentTime);
+    this.audio!.play()
+      .then(() => {
+        if (song) {
+          this.updateMediaMetadata(song);
+          this.initMediaSession(this.mediaSessionOpt!);
+        }
+        this.updateMediaSessionState(true);
+      })
+      .catch(() => {
+        this.updateMediaSessionState(false);
+      });
   }
   /** 暂停 */
   pause() {
@@ -91,19 +95,19 @@ export default class AudioTool {
   }
   // 通知系统
   async updateMediaMetadata(song: SongType) {
-    if (this.cacheURL) {
-      URL.revokeObjectURL(this.cacheURL);
-      this.cacheURL = "";
+    if (this.imgCacheURL) {
+      URL.revokeObjectURL(this.imgCacheURL);
+      this.imgCacheURL = "";
     }
     try {
-      this.cacheURL = await getURL(song);
+      this.imgCacheURL = await getURL(song);
       const metadata = new MediaMetadata({
         title: song.name,
         artist: song.singer.join(", "),
         album: "wy-music",
         artwork: [
           {
-            src: this.cacheURL,
+            src: this.imgCacheURL,
             sizes: "1000x1000",
             type: "image/jpeg",
           },
