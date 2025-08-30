@@ -1,6 +1,6 @@
 // 都是本地文件，加载很快
 
-import { getURL, getWebviewFilePath } from ".";
+import { getWebviewFilePath } from ".";
 
 type AudioToolOpt = {
   /** 播放事件 */
@@ -20,8 +20,8 @@ type MediaSessionOpt = {
 export default class AudioTool {
   private opt: AudioToolOpt;
   audio: HTMLAudioElement | null = null;
-  imgCacheURL: string = "";
-  mp3CacheURL: string = "";
+  imgCacheURL: string[] = [];
+  mp3CacheURL: string[] = [];
   currentTime: number = 0;
   mediaSessionOpt: MediaSessionOpt | null = null;
   ctx: AudioContext | null = null;
@@ -44,17 +44,15 @@ export default class AudioTool {
   }
   /** 播放 */
   async play(song?: SongType) {
+    const [mp3, cacheUrl] = this.mp3CacheURL;
+
     if (!this.audio) throw new Error("初始化");
 
-    const src = await getWebviewFilePath(song);
+    if (!this.audio.src || mp3 !== song?.mp3) {
+      cacheUrl && URL.revokeObjectURL(cacheUrl);
 
-    if (src && this.audio.src != src) {
-      this.audio.src = src;
-      if (this.mp3CacheURL) {
-        URL.revokeObjectURL(this.mp3CacheURL);
-      }
-      this.mp3CacheURL = src;
-
+      this.audio.src = (await getWebviewFilePath(song, "mp3", false))!;
+      this.mp3CacheURL = [song?.mp3!, this.audio.src];
       this.audio.load();
     }
 
@@ -95,19 +93,22 @@ export default class AudioTool {
   }
   // 通知系统
   async updateMediaMetadata(song: SongType) {
-    if (this.imgCacheURL) {
-      URL.revokeObjectURL(this.imgCacheURL);
-      this.imgCacheURL = "";
+    const [img, cacheUrl] = this.imgCacheURL;
+    if (img != song.img) {
+      cacheUrl && URL.revokeObjectURL(cacheUrl);
+      this.imgCacheURL = [];
     }
     try {
-      this.imgCacheURL = await getURL(song);
+      const src = (await getWebviewFilePath(song, "jpg", false))!;
+      this.imgCacheURL = [song.img!, src];
+
       const metadata = new MediaMetadata({
         title: song.name,
         artist: song.singer.join(", "),
         album: "wy-music",
         artwork: [
           {
-            src: this.imgCacheURL,
+            src: src,
             sizes: "1000x1000",
             type: "image/jpeg",
           },

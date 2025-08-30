@@ -18,8 +18,8 @@
         </span>
       </p>
       <div absolute flex-center top-0 right-0 hfull px-6px>
-        <NButton :type="!settingStore.windowTop ? 'tertiary' : 'info'" text @click="settingStore.updateWindowTop()"
-          :class="settingStore.windowTop ? '-rotate-45' : 'rotate-0'">
+        <NButton :type="!settingStore.windowTop ? 'tertiary' : 'info'" :color="textColor" text
+          @click="settingStore.updateWindowTop()" :class="settingStore.windowTop ? '-rotate-45' : 'rotate-0'">
           <template #icon>
             <i class="i-la:thumbtack"></i>
           </template>
@@ -52,7 +52,7 @@ import { useSettingStore } from "@/store/module/setting"
 import { useSongStore } from "@/store/module/song"
 import Control from "./Control.vue";
 import LyricPanel from "./LyricPanel.vue";
-import { computed, ref, watchEffect } from "vue";
+import { computed, ref, watchPostEffect } from "vue";
 import VisualizationAudio from "./VisualizationAudio.vue";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useMessage, useLoadingBar } from "naive-ui";
@@ -73,11 +73,11 @@ const title = computed(() => {
 
 const backgroundColor = computed(() => {
   const [r, g, b] = settingStore.color.match(/\d+/g)!.map(Number);
-  return `rgb(${r}, ${g}, ${b}, 0.75)`
+  return `rgba(${r}, ${g}, ${b}, 0.75)`
 })
 const textColor = computed(() => {
   const [r, g, b] = settingStore.color.match(/\d+/g)!.map(Number);
-  return `rgb(${255 - r}, ${255 - g}, ${255 - b}, 1)`
+  return `rgba(${255 - r}, ${255 - g}, ${255 - b}, 1)`
 })
 
 function hideWindow() {
@@ -87,11 +87,11 @@ function minWindow() {
   tauriWindow.getCurrentWindow().minimize();
 }
 
-watchEffect(async () => {
+watchPostEffect(async () => {
   const url = (await getWebviewFilePath(songStore.currSong, 'jpg')) ?? ''
-  pic_url.value = url;
-
-  url && settingStore.setMainColor(url)
+  url && settingStore.setMainColor(url).then(() => {
+    pic_url.value = url;
+  })
 })
 
 const app = getCurrentWindow();

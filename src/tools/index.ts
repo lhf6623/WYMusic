@@ -4,7 +4,8 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 
 export async function getWebviewFilePath(
   song?: SongType,
-  suffixType: string = "mp3"
+  suffixType: "mp3" | "jpg" = "mp3",
+  isLocal: boolean = true
 ) {
   if (!song) return "";
 
@@ -16,15 +17,14 @@ export async function getWebviewFilePath(
   const filePath = await join(audioPath, "WYMusic", fileName);
   const url = convertFileSrc(filePath, "asset");
 
-  // 测试是否可用
   try {
     const res = await fetch(url);
     if (res.status === 200) {
+      if (isLocal) {
+        return url;
+      }
       const blob = await res.blob();
-      const objectUrl = URL.createObjectURL(blob);
-
-      console.trace(`🚀 ~ test:`, objectUrl);
-      return objectUrl;
+      return URL.createObjectURL(blob);
     }
   } catch (error) {
     return undefined;
@@ -114,34 +114,5 @@ export async function getImgColor(
     const [imgObj] = res;
 
     return imgObj?.color;
-  });
-}
-
-/** 使用 createObjectURL 获取本地图片地址的缓存地址, 用于系统媒体会话 */
-export async function getURL(song: SongType) {
-  const src = await getWebviewFilePath(song, "jpg");
-  const img = new Image();
-  img.src = src!;
-  img.crossOrigin = "Anonymous";
-
-  return new Promise<string>((resolve, reject) => {
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext("2d");
-      ctx?.drawImage(img, 0, 0);
-      canvas.toBlob(
-        async (blob) => {
-          const src = URL.createObjectURL(blob!);
-          resolve(src);
-        },
-        "image/jpeg",
-        0.5
-      );
-    };
-    img.onerror = () => {
-      reject("图片加载失败");
-    };
   });
 }

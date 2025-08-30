@@ -63,7 +63,7 @@ export const useSettingStore = defineStore("setting", {
     /** 获取主色调 */
     setMainColor(url: string) {
       // 耗时任务，不要同步代码
-      getImgColor(url).then((_color) => {
+      return getImgColor(url).then((_color) => {
         this.color = _color ?? "rgb(255, 255, 255)";
       });
     },
