@@ -136,42 +136,43 @@ export const useSongStore = defineStore("song", {
       if (this.audioTool) {
         return this.audioTool;
       }
-      this.audioTool = new AudioTool({
-        onplay: () => {
-          this.isPlaying = true;
-          this.playLoading = false;
-        },
-        onpause: () => {
-          this.isPlaying = false;
-        },
-        onended: () => {
-          this.isPlaying = false;
-        },
-        ontimeupdate: throttle(() => {
-          if (this.audioTool?.audio) {
-            this.timer = this.audioTool.audio.currentTime || 0;
-            this.audioTool.currentTime = this.timer;
+      this.audioTool = new AudioTool(
+        {
+          onplay: () => {
+            this.isPlaying = true;
+            this.playLoading = false;
+          },
+          onpause: () => {
+            this.isPlaying = false;
+          },
+          onended: () => {
+            this.isPlaying = false;
+          },
+          ontimeupdate: throttle(() => {
+            if (this.audioTool?.audio) {
+              this.timer = this.audioTool.audio.currentTime || 0;
+              this.audioTool.currentTime = this.timer;
 
-            if (this.timer >= this.audioTool.audio.duration) {
-              this.playNext("next");
+              if (this.timer >= this.audioTool.audio.duration) {
+                this.playNext("next");
+              }
             }
-          }
-        }, 800),
-      });
-      // audio 事件初始化，
-      this.audioTool.initMediaSession({
-        onprevioustrack: () => {
-          this.playNext("prev");
+          }, 800),
         },
-        nexttrack: () => {
-          this.playNext("next");
-        },
-        onseekto: throttle((e: MediaSessionActionDetails) => {
-          if (e && e.seekTime !== undefined) {
-            this.setSeek(e.seekTime);
-          }
-        }, 300),
-      });
+        {
+          onprevioustrack: () => {
+            this.playNext("prev");
+          },
+          nexttrack: () => {
+            this.playNext("next");
+          },
+          onseekto: (e: MediaSessionActionDetails) => {
+            if (e && e.seekTime !== undefined) {
+              this.setSeek(e.seekTime);
+            }
+          },
+        }
+      );
     },
     async play(id?: number | string) {
       this.playLoading = true;

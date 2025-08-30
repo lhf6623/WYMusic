@@ -28,11 +28,8 @@
     </header>
     <!-- 展示歌曲专辑封面 -->
     <div h330px w330px overflow-hidden absolute inset-0 z-50 flex-center>
-      <NImage width="330px" height="330px" preview-disabled :src="pic_url">
-        <template #error>
-          <i w130px h130px animate-spin i-mdi:image-filter-hdr-outline></i>
-        </template>
-      </NImage>
+      <NImage v-if="pic_url" width="330px" height="330px" preview-disabled :src="pic_url"></NImage>
+      <i v-else w130px h130px animate-spin i-mdi:image-filter-hdr-outline></i>
     </div>
     <!-- 展示歌词 -->
     <div h330px overflow-hidden w-full absolute inset-0 z-100 flex-center v-if="settingStore.showLyric">
@@ -89,9 +86,13 @@ function minWindow() {
 
 watchPostEffect(async () => {
   const url = (await getWebviewFilePath(songStore.currSong, 'jpg')) ?? ''
-  url && settingStore.setMainColor(url).then(() => {
-    pic_url.value = url;
-  })
+  if (url) {
+    settingStore.setMainColor(url).then(() => {
+      pic_url.value = url;
+    })
+  } else {
+    pic_url.value = ''
+  }
 })
 
 const app = getCurrentWindow();

@@ -27,8 +27,9 @@ export default class AudioTool {
   ctx: AudioContext | null = null;
   source: MediaElementAudioSourceNode | null = null;
   analyser: AnalyserNode | null = null;
-  constructor(opt: AudioToolOpt) {
+  constructor(opt: AudioToolOpt, mediaSessionOpt: MediaSessionOpt) {
     this.opt = opt;
+    this.mediaSessionOpt = mediaSessionOpt;
     this.audio = new Audio();
     this.ctx = new AudioContext();
     this.source = this.ctx.createMediaElementSource(this.audio);
@@ -42,13 +43,13 @@ export default class AudioTool {
     this.audio.addEventListener("ended", this.opt.onended);
     this.audio.addEventListener("timeupdate", this.opt.ontimeupdate);
   }
-  /** 播放 */
+  /** 播放, 如果没有值，应该是媒体控制那里点的播放 */
   async play(song?: SongType) {
     const [mp3, cacheUrl] = this.mp3CacheURL;
 
     if (!this.audio) throw new Error("初始化");
 
-    if (!this.audio.src || mp3 !== song?.mp3) {
+    if (!this.audio.src || (song && mp3 !== song.mp3)) {
       cacheUrl && URL.revokeObjectURL(cacheUrl);
 
       this.audio.src = (await getWebviewFilePath(song, "mp3", false))!;
@@ -61,7 +62,7 @@ export default class AudioTool {
       .then(() => {
         if (song) {
           this.updateMediaMetadata(song);
-          this.initMediaSession(this.mediaSessionOpt!);
+          this.initMediaSession();
         }
         this.updateMediaSessionState(true);
       })
@@ -96,28 +97,22 @@ export default class AudioTool {
     const [img, cacheUrl] = this.imgCacheURL;
     if (img != song.img) {
       cacheUrl && URL.revokeObjectURL(cacheUrl);
-      this.imgCacheURL = [];
-    }
-    try {
       const src = (await getWebviewFilePath(song, "jpg", false))!;
       this.imgCacheURL = [song.img!, src];
-
-      const metadata = new MediaMetadata({
-        title: song.name,
-        artist: song.singer.join(", "),
-        album: "wy-music",
-        artwork: [
-          {
-            src: src,
-            sizes: "1000x1000",
-            type: "image/jpeg",
-          },
-        ],
-      });
-      navigator.mediaSession.metadata = metadata;
-    } catch (error) {
-      console.warn("更新媒体元数据失败:", error);
     }
+    const metadata = new MediaMetadata({
+      title: song.name,
+      artist: song.singer.join(", "),
+      album: "wy-music",
+      artwork: [
+        {
+          src: this.imgCacheURL[1],
+          sizes: "1000x1000",
+          type: "image/jpeg",
+        },
+      ],
+    });
+    navigator.mediaSession.metadata = metadata;
   }
   // 更新媒体会话状态
   updateMediaSessionState(playing: boolean) {
@@ -133,8 +128,7 @@ export default class AudioTool {
     navigator.mediaSession.setActionHandler("nexttrack", null);
     navigator.mediaSession.setActionHandler("seekto", null);
   }
-  initMediaSession(opt: MediaSessionOpt) {
-    this.mediaSessionOpt = opt;
+  initMediaSession() {
     this.clearMediaSession();
     // 播放事件处理
     navigator.mediaSession.setActionHandler("play", async () => {
@@ -153,11 +147,17 @@ export default class AudioTool {
     // 上一首事件处理
     navigator.mediaSession.setActionHandler(
       "previoustrack",
-      opt.onprevioustrack
+      this.mediaSessionOpt!.onprevioustrack
     );
     // 下一首事件处理
-    navigator.mediaSession.setActionHandler("nexttrack", opt.nexttrack);
+    navigator.mediaSession.setActionHandler(
+      "nexttrack",
+      this.mediaSessionOpt!.nexttrack
+    );
     // 调整进度条事件处理
-    navigator.mediaSession.setActionHandler("seekto", opt.onseekto);
+    navigator.mediaSession.setActionHandler(
+      "seekto",
+      this.mediaSessionOpt!.onseekto
+    );
   }
 }
