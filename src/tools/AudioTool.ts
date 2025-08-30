@@ -48,6 +48,8 @@ export default class AudioTool {
 
       if (src && this.audio.src != src) {
         this.audio.src = src;
+        console.log("test", src);
+
         this.audio.load();
       }
 
