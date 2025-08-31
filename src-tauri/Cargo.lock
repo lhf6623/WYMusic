@@ -5281,7 +5281,7 @@ dependencies = [
 
 [[package]]
 name = "wy-music"
-version = "0.3.6"
+version = "0.3.7"
 dependencies = [
  "dirs",
  "mp3-metadata",

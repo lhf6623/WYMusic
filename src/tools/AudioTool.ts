@@ -53,7 +53,6 @@ export default class AudioTool {
       cacheUrl && URL.revokeObjectURL(cacheUrl);
 
       this.audio.src = (await getWebviewFilePath(song, "mp3", false))!;
-      console.log("test mp3", this.audio.src);
 
       this.mp3CacheURL = [song?.mp3!, this.audio.src];
       this.audio.load();
@@ -97,20 +96,20 @@ export default class AudioTool {
   // 通知系统
   async updateMediaMetadata(song: SongType) {
     const [img, cacheUrl] = this.imgCacheURL;
-    if (img != song.img) {
-      cacheUrl && URL.revokeObjectURL(cacheUrl);
-      const src = (await getWebviewFilePath(song, "jpg", false))!;
-      console.log("test img", src);
+    if (img && img === song.img) return;
 
-      this.imgCacheURL = [song.img!, src];
-    }
+    cacheUrl && URL.revokeObjectURL(cacheUrl);
+    const src = (await getWebviewFilePath(song, "jpg", false))!;
+
+    this.imgCacheURL = [song.img!, src];
+
     const metadata = new MediaMetadata({
       title: song.name,
       artist: song.singer.join(", "),
       album: "wy-music",
       artwork: [
         {
-          src: this.imgCacheURL[1],
+          src,
           sizes: "1000x1000",
           type: "image/jpeg",
         },
