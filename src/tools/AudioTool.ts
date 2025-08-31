@@ -98,9 +98,7 @@ export default class AudioTool {
     const [img, cacheUrl] = this.imgCacheURL;
     if (img && img === song.img) return;
 
-    cacheUrl && URL.revokeObjectURL(cacheUrl);
     const src = (await getWebviewFilePath(song, "jpg", false))!;
-
     this.imgCacheURL = [song.img!, src];
 
     const metadata = new MediaMetadata({
@@ -116,6 +114,8 @@ export default class AudioTool {
       ],
     });
     navigator.mediaSession.metadata = metadata;
+    // 能走到这里的流程，说明图片是新的，需要清除旧的
+    cacheUrl && URL.revokeObjectURL(cacheUrl);
   }
   // 更新媒体会话状态
   updateMediaSessionState(playing: boolean) {

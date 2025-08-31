@@ -1,6 +1,6 @@
 [package]
 name = "wy-music"
-version = "0.3.8"
+version = "0.3.9"
 description = "A Music App"
 authors = ["you"]
 edition = "2021"
