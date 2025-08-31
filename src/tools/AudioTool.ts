@@ -53,6 +53,8 @@ export default class AudioTool {
       cacheUrl && URL.revokeObjectURL(cacheUrl);
 
       this.audio.src = (await getWebviewFilePath(song, "mp3", false))!;
+      console.log("test mp3", this.audio.src);
+
       this.mp3CacheURL = [song?.mp3!, this.audio.src];
       this.audio.load();
     }
@@ -98,6 +100,8 @@ export default class AudioTool {
     if (img != song.img) {
       cacheUrl && URL.revokeObjectURL(cacheUrl);
       const src = (await getWebviewFilePath(song, "jpg", false))!;
+      console.log("test img", src);
+
       this.imgCacheURL = [song.img!, src];
     }
     const metadata = new MediaMetadata({
