@@ -7,6 +7,7 @@
 use serde::Serialize;
 use reqwest::Client;
 use std::path::PathBuf;
+use tauri::Manager;
 
 #[derive(serde::Deserialize)]
 pub struct DownloadResources {
@@ -340,6 +341,12 @@ async fn delete_file(id: String) -> Result<(), String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            // 聚焦窗口
+            let window = app.get_webview_window("main").unwrap();
+            window.show().unwrap();
+            window.set_focus().unwrap();
+        }))
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![download_file, delete_file, download_img_file, get_songs])
         .run(tauri::generate_context!())
