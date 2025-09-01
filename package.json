@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@tauri-apps/api": "^2.8.0",
+    "@tauri-apps/plugin-dialog": "^2.3.3",
     "@types/node": "^24.3.0",
     "@unocss/reset": "^66.4.2",
     "NeteaseCloudMusicApi": "^4.27.0",

@@ -29,7 +29,6 @@ async function getList(songList: SongDetail[]) {
       };
       songInfo.push(song);
       return {
-        id: id.toString(),
         url: al.picUrl.replace("http://", "https://"),
         name: getSongName(song, "jpg"),
       };

@@ -40,8 +40,6 @@ export async function deleteFile(id: string | number) {
 /** 下载多张图片到本地 */
 export async function downloadImages(
   data: {
-    /** 歌曲id */
-    id: string;
     /** 图片url */
     url: string;
     /** 图片名称 */
