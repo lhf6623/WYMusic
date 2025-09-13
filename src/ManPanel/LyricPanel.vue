@@ -1,28 +1,30 @@
 <template>
-  <div ref="lyricPanel" wfull flex-center text-18px class="lyric-panel">
+  <div ref="lyricPanel" wfull flex-center text-18px class="lrc-panel">
     <p v-for="(text, index) in lyric_text" :key="index" text-center pb-1>{{ text || '~~' }}</p>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watchPostEffect } from 'vue';
-import { useSongStore } from "@/store/module/song";
 import { useSettingStore } from '@/store/module/setting';
 
-const songStore = useSongStore();
 const settingStore = useSettingStore()
 const lyric_all_text = ref<{ time: number, text: string }[]>([]);
 
+const props = defineProps<{
+  song: null | LocalMp3FileInfo,
+  timer: number,
+}>()
+
 const showPanel = computed(() => {
-  return !!songStore.currSong ? 'block' : 'none'
+  return !!props.song ? 'block' : 'none'
 })
 
 const lyric_text = computed(() => {
   if (lyric_all_text.value.length <= 3) return lyric_all_text.value.map(item => item.text)
   let index = 1
 
-  const { timer } = songStore
-
+  const { timer } = props
   for (let i = 1; i < lyric_all_text.value.length - 1; i++) {
     const item = lyric_all_text.value[i]
     const nextItem = lyric_all_text.value[i + 1]
@@ -37,12 +39,12 @@ const lyric_text = computed(() => {
 })
 
 watchPostEffect(() => {
-  if (!songStore.currSong || !songStore.currSong.lyric) {
+  if (!props.song || !props.song?.lrc) {
     lyric_all_text.value = []
     return;
   }
 
-  lyric_all_text.value = songStore.currSong.lyric.split('\n').filter(Boolean).map(item => {
+  lyric_all_text.value = props.song.lrc.split('\n').filter(Boolean).map(item => {
     return {
       time: timeToSeconds(item),
       text: item.replace(/\[(.*?)\]/, '') || '',
@@ -84,7 +86,7 @@ const backgroundColor = computed(() => {
 </script>
 
 <style scoped>
-.lyric-panel {
+.lrc-panel {
   display: v-bind('showPanel');
   color: v-bind('text_color');
   text-shadow: v-bind('text_shadow_color');

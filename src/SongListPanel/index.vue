@@ -27,7 +27,7 @@ import { useSongStore } from "@/store/module/song";
 import { useUserStore } from "@/store/module/user";
 import { useSettingStore } from "@/store/module/setting";
 import SongList from "./SongList.vue";
-import { search } from "@/tools/api_songs";
+import { search } from "@/api/songs";
 import MenuAbility from "./MenuAbility.vue";
 import { menuKey } from "./useMenuContext"
 
@@ -40,7 +40,7 @@ const dailyLoading = ref(false);
 const menuData = reactive<{
   x: number,
   y: number,
-  songId: number | string | null,
+  songId: string | null,
   show: boolean
 }>({
   x: 0,
@@ -49,7 +49,7 @@ const menuData = reactive<{
   show: false
 })
 /** 搜索 */
-const searchList = ref<(number | string)[]>([])
+const searchList = ref<string[]>([])
 
 const menuOperate = reactive({
   /** 添加到播放列表 */
@@ -58,7 +58,7 @@ const menuOperate = reactive({
   remove_play_list: active.value == 'playList',
 });
 
-function selectMenu(key: MenuOperateType, songID: string | number | null) {
+function selectMenu(key: MenuOperateType, songID: string | null) {
 
   if (!songID) return
 
@@ -79,7 +79,7 @@ function selectMenu(key: MenuOperateType, songID: string | number | null) {
   // 添加到下一首
   if (key === 'next_play') {
     const play_list = songStore.playList.flatMap(id => {
-      if (id == songStore.currSongId) return [id, songID]
+      if (id == songStore.currSongKey) return [id, songID]
       if (id == songID) return []
       return [id]
     })
@@ -104,7 +104,7 @@ function selectMenu(key: MenuOperateType, songID: string | number | null) {
     songStore.delSong(songID, active.value)
   }
 }
-function showMenu(songId: number | string | null, x: number, y: number, show: boolean) {
+function showMenu(songId: string | null, x: number, y: number, show: boolean) {
   menuData.songId = songId;
   menuData.x = x;
   menuData.y = y;
@@ -166,13 +166,12 @@ function handleSearch(value: string) {
 
     searchLoaging.value = false;
     searchList.value = search_list.map(item => item.id)
-    songStore.updateAllList(search_list)
   });
 }
 async function playAll() {
   if (active.value == 'playList') return
   // 除了播放列表和搜索列表都显示
-  let list: (number | string)[] = []
+  let list: (string)[] = []
   if (active.value == 'dailyList') {
     list = songStore.dailyList
   }

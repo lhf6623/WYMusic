@@ -14,6 +14,9 @@ importers:
       '@tauri-apps/plugin-dialog':
         specifier: ^2.3.3
         version: 2.3.3
+      '@tauri-apps/plugin-fs':
+        specifier: ~2.4.2
+        version: 2.4.2
       '@types/node':
         specifier: ^24.3.0
         version: 24.3.0
@@ -26,6 +29,9 @@ importers:
       dayjs:
         specifier: ^1.11.17
         version: 1.11.17(typescript@5.9.2)
+      dexie:
+        specifier: ^4.2.0
+        version: 4.2.0
       lodash-es:
         specifier: ^4.17.21
         version: 4.17.21
@@ -35,9 +41,6 @@ importers:
       pinia-plugin-persistedstate:
         specifier: ^4.5.0
         version: 4.5.0(@nuxt/kit@3.17.5)(pinia@3.0.3(typescript@5.9.2)(vue@3.5.20(typescript@5.9.2)))
-      rgbaster:
-        specifier: ^2.1.1
-        version: 2.1.1
       vue:
         specifier: ^3.5.20
         version: 3.5.20(typescript@5.9.2)
@@ -45,18 +48,12 @@ importers:
       '@iconify-json/eos-icons':
         specifier: ^1.2.4
         version: 1.2.4
-      '@iconify-json/flat-color-icons':
-        specifier: ^1.2.3
-        version: 1.2.3
       '@iconify-json/iconoir':
         specifier: ^1.2.9
         version: 1.2.9
       '@iconify-json/la':
         specifier: ^1.2.1
         version: 1.2.1
-      '@iconify-json/majesticons':
-        specifier: ^1.2.4
-        version: 1.2.4
       '@iconify-json/material-symbols':
         specifier: ^1.2.33
         version: 1.2.33
@@ -66,6 +63,9 @@ importers:
       '@iconify-json/solar':
         specifier: ^1.2.4
         version: 1.2.4
+      '@iconify-json/streamline-pixel':
+        specifier: ^1.2.0
+        version: 1.2.0
       '@tauri-apps/cli':
         specifier: ^2.8.3
         version: 2.8.3
@@ -416,17 +416,11 @@ packages:
   '@iconify-json/eos-icons@1.2.4':
     resolution: {integrity: sha512-gp2BCSF3+aRgMqE7LRAVxT5nXJLOtfcvGnOYwJz4gc4zxcEqAaOByxFVLZej15jXPRJmUv2TSzMNrQ2gDtw4VA==}
 
-  '@iconify-json/flat-color-icons@1.2.3':
-    resolution: {integrity: sha512-KcmJ7CY0TKFv5GuBjiS4/v++jEcNXna1jfY+yq014tnw/MN/jMI2oYpoMHGuIpYtUqDu7eove+WySnOYO8nS3w==}
-
   '@iconify-json/iconoir@1.2.9':
     resolution: {integrity: sha512-TXcx8mnxuZ0Weq104HwXZFPI0mlJzKjoy4nE20B803+Jrt7g2u4uc2iCGyHKpdqXVws3KaMTMDmY4yExy9Z+Qw==}
 
   '@iconify-json/la@1.2.1':
     resolution: {integrity: sha512-7VUpZ+E7PfBpCXmAzLEGRR0LqCyFQRJiJTriO/vIZtQ1BLJ4xiDlIQ8gCCQvyTnKPG4IrvencwAxXpJGhk4pYg==}
-
-  '@iconify-json/majesticons@1.2.4':
-    resolution: {integrity: sha512-8h6zfqN/8eKLNGcHzJd8LZ+vI6aC2MIGq+QTNoYD/H98TL1N/s8ufxal54OkzIsemylXxWLj+NLd0wXDLlVIIg==}
 
   '@iconify-json/material-symbols@1.2.33':
     resolution: {integrity: sha512-Bs0X1+/vpJydW63olrGh60zkR8/Y70sI14AIWaP7Z6YQXukzWANH4q3I0sIPklbIn1oL6uwLvh0zQyd6Vh79LQ==}
@@ -436,6 +430,9 @@ packages:
 
   '@iconify-json/solar@1.2.4':
     resolution: {integrity: sha512-ruAh+bbYimlzqXW6MtqmvWlfatvFjE7o1fZWieps1h42Dx7AaHu4Z/dgOYSO1RR4MIhNzD+2xgEbFjASgBcEyg==}
+
+  '@iconify-json/streamline-pixel@1.2.0':
+    resolution: {integrity: sha512-0Vv7j68c92+eLWWS9agrdmSzdVlu8NpG5R3kphGK3lejlgjSHYcdg2B2lR8I1S78FPbKbiK15XZj5d67ItvlCA==}
 
   '@iconify/types@2.0.0':
     resolution: {integrity: sha512-+wluvCrRhXrhyOmRDJ3q8mux9JkKy5SJ/v8ol2tu4FVjyYvtEzkc/3pK15ET6RKg4b4w4BmTk1+gsCUhf21Ykg==}
@@ -887,6 +884,9 @@ packages:
 
   '@tauri-apps/plugin-dialog@2.3.3':
     resolution: {integrity: sha512-cWXB9QJDbLIA0v7I5QY183awazBEQNPhp19iPvrMZoJRX8SbFkhWFx1/q7zy7xGpXXzxz29qtq6z21Ho7W5Iew==}
+
+  '@tauri-apps/plugin-fs@2.4.2':
+    resolution: {integrity: sha512-YGhmYuTgXGsi6AjoV+5mh2NvicgWBfVJHHheuck6oHD+HC9bVWPaHvCP0/Aw4pHDejwrvT8hE3+zZAaWf+hrig==}
 
   '@tokenizer/token@0.3.0':
     resolution: {integrity: sha512-OvjF+z51L3ov0OyAU0duzsYuvO01PH7x4t6DJx+guahgTnBHkhJdG7soQeTSFLWN3efnHyibZ4Z8l2EuWwJN3A==}
@@ -1503,6 +1503,9 @@ packages:
     resolution: {integrity: sha512-pGjwhsmsp4kL2RTz08wcOlGN83otlqHeD/Z5T8GXZB+/YcpQ/dgo+lbU8ZsGxV0HIvqqxo9l7mqYwyYMD9bKDg==}
     engines: {node: '>=0.10'}
     hasBin: true
+
+  dexie@4.2.0:
+    resolution: {integrity: sha512-OSeyyWOUetDy9oFWeddJgi83OnRA3hSFh3RrbltmPgqHszE9f24eUCVLI4mPg0ifsWk0lQTdnS+jyGNrPMvhDA==}
 
   dijkstrajs@1.0.3:
     resolution: {integrity: sha512-qiSlmBq9+BCdCA/L46dw8Uy93mloxsPSbwnm5yrKn2vMPiy8KyAskTF6zuV/j5BMsmOGZDPs7KjU+mjb670kfA==}
@@ -2698,9 +2701,6 @@ packages:
   rfdc@1.4.1:
     resolution: {integrity: sha512-q1b3N5QkRUWUl7iyylaaj3kOpIT0N2i9MqIEQXP73GVsN9cw3fdx8X63cEmWhJGi2PPCF23Ijp7ktmd39rawIA==}
 
-  rgbaster@2.1.1:
-    resolution: {integrity: sha512-vUQI+ldMMSGXEbWtqb/6aqLY1LHc33OtXg2Q9S0TCxzt2KxGncRJB6dk860KzhWTjms+Fz4wkxrJu8MlCrFpYg==}
-
   rollup@4.49.0:
     resolution: {integrity: sha512-3IVq0cGJ6H7fKXXEdVt+RcYvRCt8beYY9K1760wGQwSAHZcS9eot1zDG5axUbcp/kWRi5zKIIDX8MoKv/TzvZA==}
     engines: {node: '>=18.0.0', npm: '>=8.0.0'}
@@ -3566,19 +3566,11 @@ snapshots:
     dependencies:
       '@iconify/types': 2.0.0
 
-  '@iconify-json/flat-color-icons@1.2.3':
-    dependencies:
-      '@iconify/types': 2.0.0
-
   '@iconify-json/iconoir@1.2.9':
     dependencies:
       '@iconify/types': 2.0.0
 
   '@iconify-json/la@1.2.1':
-    dependencies:
-      '@iconify/types': 2.0.0
-
-  '@iconify-json/majesticons@1.2.4':
     dependencies:
       '@iconify/types': 2.0.0
 
@@ -3591,6 +3583,10 @@ snapshots:
       '@iconify/types': 2.0.0
 
   '@iconify-json/solar@1.2.4':
+    dependencies:
+      '@iconify/types': 2.0.0
+
+  '@iconify-json/streamline-pixel@1.2.0':
     dependencies:
       '@iconify/types': 2.0.0
 
@@ -4020,6 +4016,10 @@ snapshots:
       '@tauri-apps/cli-win32-x64-msvc': 2.8.3
 
   '@tauri-apps/plugin-dialog@2.3.3':
+    dependencies:
+      '@tauri-apps/api': 2.8.0
+
+  '@tauri-apps/plugin-fs@2.4.2':
     dependencies:
       '@tauri-apps/api': 2.8.0
 
@@ -4770,6 +4770,8 @@ snapshots:
 
   detect-libc@1.0.3:
     optional: true
+
+  dexie@4.2.0: {}
 
   dijkstrajs@1.0.3: {}
 
@@ -5886,8 +5888,6 @@ snapshots:
   reusify@1.1.0: {}
 
   rfdc@1.4.1: {}
-
-  rgbaster@2.1.1: {}
 
   rollup@4.49.0:
     dependencies:

@@ -1,31 +1,22 @@
 <script setup lang="ts">
 
 import { useSettingStore } from "@/store/module/setting";
-import { useSongStore } from "@/store/module/song";
-import { onMounted, watchEffect } from "vue";
+import { defineAsyncComponent, onMounted, onUnmounted, watchEffect } from "vue";
 import { zhCN, dateZhCN } from "naive-ui";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { LogicalSize } from "@tauri-apps/api/dpi";
-import SongListPanel from "./SongListPanel/index.vue";
-import Setting from "./Setting.vue";
-import ManPanel from "./ManPanel/index.vue";
-import { getSongs } from '@/tools/api_local_songs'
+import initTask from "@/tools/initTask";
+
+const ManPanel = defineAsyncComponent(() => import("./ManPanel/index.vue"));
+const SongListPanel = defineAsyncComponent(() => import("./SongListPanel/index.vue"));
+const Setting = defineAsyncComponent(() => import("./Setting.vue"))
 
 const settingStore = useSettingStore();
-const songStore = useSongStore();
 const app = getCurrentWindow();
 
-onMounted(async () => {
-  settingStore.showBottomPanel = null;
-  settingStore.focused = true;
-  songStore.isPlaying = false;
+onMounted(initTask);
 
-  getSongs("").then(songList => {
-    songStore.localList = songList.map(item => item.id);
-    songStore.updateAllList(songList);
-  })
-  settingStore.updateWindowTop(settingStore.windowTop)
-});
+onUnmounted(initTask)
 
 watchEffect(() => {
   app.setSize(new LogicalSize(330, settingStore.showBottomPanel ? 660 : 330));

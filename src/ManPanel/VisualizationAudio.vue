@@ -15,6 +15,10 @@ const canvasRef = useTemplateRef<HTMLCanvasElement>('canvasRef');
 let animationId: number | null = null;
 let cleanup: (() => void) | undefined = undefined;
 
+const props = defineProps<{
+  song: null | LocalMp3FileInfo,
+}>()
+
 
 // 条纹顶部色
 const stripeTopColor = computed(() => {
@@ -67,7 +71,7 @@ const drawVisualization = () => {
     }
 
     if (!settingStore.focused) {
-      const progress = songStore.timer / ((songStore.currSong?.dt ?? 0) / 1000)
+      const progress = songStore.timer / ((props.song?.dt ?? 0) / 1000)
 
       // 进度条
       const gradient = ctx.createLinearGradient(0, canvas.height - 2, canvas.width * progress, canvas.height - 2);

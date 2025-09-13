@@ -9,16 +9,16 @@ export interface MenuContext {
   menuData: {
     x: number;
     y: number;
-    songId: number | string | null;
+    songId: string | null;
     show: boolean;
   };
   showMenu: (
-    songId: number | string | null,
+    songId: string | null,
     x: number,
     y: number,
     show: boolean
   ) => void;
-  selectMenu: (key: MenuOperateType, song: number | string | null) => void;
+  selectMenu: (key: MenuOperateType, songId: string | null) => void;
 }
 
 export const menuKey: InjectionKey<MenuContext> = Symbol("menu");

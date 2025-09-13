@@ -6,18 +6,19 @@
 
 <script setup lang="ts">
 import { DropdownOption } from 'naive-ui'
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useSongStore } from "@/store/module/song"
 import { useMenuInject } from "./useMenuContext"
 
 const { menuOperate, showMenu, selectMenu } = useMenuInject()
 const songStore = useSongStore()
 const props = defineProps<{
-  songId: string | number | null,
+  songId: string | null,
   x: number,
   y: number,
   show: boolean
-}>()
+}>();
+const is_local = ref(false)
 function onClickoutside() {
   setTimeout(() => {
     showMenu(props.songId, props.x, props.y, false)
@@ -28,10 +29,18 @@ function handleSelect(key: MenuOperateType) {
   showMenu(props.songId, props.x, props.y, false)
 }
 
+watch(() => props.show, async (newVal) => {
+  if (newVal && props.songId) {
+    is_local.value = (await songStore.getSong(props.songId)).path !== undefined
+  } else {
+    is_local.value = false
+  }
+})
+
 const menu = computed<Array<DropdownOption>>(() => {
   if (!props.songId) return []
 
-  const is_play = songStore.currSongId == props.songId
+  const is_play = songStore.currSongKey == props.songId
   const is_play_list = songStore.inPlayList(props.songId)
 
   const { add_play_list, remove_play_list } = menuOperate
@@ -45,7 +54,7 @@ const menu = computed<Array<DropdownOption>>(() => {
   }
 
   // 当前歌曲 和下一首歌曲
-  const index = songStore.playList.findIndex(item => item == songStore.currSongId)
+  const index = songStore.playList.findIndex(item => item == songStore.currSongKey)
   const next_index = index == songStore.playList.length - 1 ? 0 : index + 1
   const is_next_song = songStore.playList[next_index] == props.songId
 
@@ -64,8 +73,7 @@ const menu = computed<Array<DropdownOption>>(() => {
     key: 'remove_play_list',
   }] : []
 
-  const song = songStore.allList.find((item) => item.id == props.songId)
-  const download = !song?.mp3 ? [{
+  const download = !is_local.value ? [{
     label: '下载',
     key: 'download',
   }] : []

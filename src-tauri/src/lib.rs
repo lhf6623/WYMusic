@@ -1,12 +1,13 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 // 导入工具函数、插件配置和命令模块
 mod tools;
+mod mp3_tools;
 mod plugins;
 mod commands;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let app = tauri::Builder::default();
+    let app = tauri::Builder::default().plugin(tauri_plugin_fs::init()).plugin(tauri_plugin_persisted_scope::init());
     
     let app_with_plugins = plugins::setup_plugins(app);
     

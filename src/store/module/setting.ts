@@ -15,7 +15,7 @@ export interface SettingStore {
   /** 底部面板展示 */
   showBottomPanel: "song_list" | "setting" | null;
   /** 本地音频目录 */
-  localAudioDir: string;
+  audioDir: string[];
   /** 请求地址 */
   apiAudioUrl: string;
   /** 展示音频可视化面板 */
@@ -36,7 +36,7 @@ export const useSettingStore = defineStore("setting", {
       showLyric: false,
       color: "rgb(255, 255, 255)",
       showBottomPanel: null,
-      localAudioDir: "",
+      audioDir: [],
       apiAudioUrl: import.meta.env.VITE_API_AUDIO_URL,
       showAudioVisualization: true,
       testApiAudioUrl: false,
@@ -64,7 +64,7 @@ export const useSettingStore = defineStore("setting", {
     setMainColor(url: string) {
       // 耗时任务，不要同步代码
       return getImgColor(url).then((_color) => {
-        this.color = _color ?? "rgb(255, 255, 255)";
+        this.color = _color[0] ?? "rgb(255, 255, 255)";
       });
     },
   },

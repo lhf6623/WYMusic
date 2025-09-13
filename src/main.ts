@@ -5,20 +5,9 @@ import "virtual:uno.css";
 import { useNaive } from "./tools/useNaive";
 
 import { pinia } from "./store";
-import { useSettingStore } from "./store/module/setting";
-import { useSongStore } from "./store/module/song";
 
 const app = createApp(App);
 app.use(pinia);
 
 useNaive(app);
 app.mount("#app");
-
-(async () => {
-  const settingStore = useSettingStore();
-  if (!settingStore.localAudioDir) {
-    settingStore.localAudioDir = await settingStore.getDefaultAudioDir();
-  }
-  const songStore = useSongStore();
-  songStore.initAudioTool();
-})();

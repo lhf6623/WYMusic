@@ -15,7 +15,8 @@
         <p w30px text-center>#</p>
         <div flex flex-1 gap-6px justify-between>
           <span v-if="type == 'search'">标题</span>
-          <NInput v-else size="tiny" placeholder="搜索标题" clearable v-model:value="filterInput" :bordered="false">
+          <NInput v-else size="tiny" :placeholder="`搜索标题(${list.length})`" clearable v-model:value="filterInput"
+            :bordered="false">
           </NInput>
           <div>
             <NButton @click="clearList" text v-show="type === 'playList'">
@@ -33,7 +34,7 @@
           </div>
         </div>
       </div>
-      <Song v-for="(id, index) in list" :index="index" :key="id" :songId="id" :type="type">
+      <Song v-for="(path, index) in list" :index="index" :key="path" :songKey="path" :type="type" :filter="filterInput">
       </Song>
     </div>
     <!-- 定位按钮 阴影 -->
@@ -48,7 +49,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue';
+import { onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue';
 import Song from './Song.vue';
 import { ScrollbarInst } from 'naive-ui'
 import { useSongStore } from "@/store/module/song";
@@ -60,7 +61,7 @@ const observer = ref<IntersectionObserver | null>(null)
 const songRef = ref<Element | null>(null)
 const props = defineProps<{
   loaging?: boolean;
-  list: (number | string)[];
+  list: string[];
   type: TabsType;
   activeType: TabsType;
 }>()
@@ -72,20 +73,6 @@ const emit = defineEmits<{
 
 const selectValue = ref('');
 const filterInput = ref('')
-const filterList = computed(() => {
-  if (!filterInput.value) return props.list
-  const list = props.list.map(id => {
-    return songStore.allList.find(item => item.id === id)!
-  }).filter(item => {
-    return item.name.toLocaleLowerCase().includes(filterInput.value.toLocaleLowerCase())
-  }).map(item => item.id)
-
-  return list
-})
-
-const list = computed(() => {
-  return filterList.value.length ? filterList.value : props.list
-})
 
 function handleSubmit() {
   emit('search', selectValue.value)
@@ -97,7 +84,7 @@ function clearList() {
   emit('clear')
 }
 
-watch(() => [list.value, props.activeType, songStore.currSongId], createObserve, { deep: true })
+watch(() => [props.activeType, songStore.currSongKey], createObserve, { deep: true })
 
 // 判断当前播放歌曲是否在可视区域
 function createObserve() {
@@ -105,14 +92,14 @@ function createObserve() {
     observer.value.disconnect()
     observer.value = null
   }
-  if (!songStore.currSongId) return
+  if (!songStore.currSongKey) return
 
   const scrollbarInst = (scrollbar.value as any).scrollbarInstRef
 
   if (!scrollbarInst) return
 
   const { contentRef } = scrollbarInst
-  songRef.value = contentRef.querySelector(`[data-id="${props.type}_${songStore.currSongId}"]`);
+  songRef.value = contentRef.querySelector(`[data-id="${props.type}_${songStore.currSongKey}"]`);
 
   if (!songRef.value) return
 

@@ -28,44 +28,45 @@
     </header>
     <!-- 展示歌曲专辑封面 -->
     <div h330px w330px overflow-hidden absolute inset-0 z-50 flex-center>
-      <NImage v-if="pic_url" width="330px" height="330px" preview-disabled :src="pic_url"></NImage>
-      <i v-else w130px h130px animate-spin i-mdi:image-filter-hdr-outline></i>
+      <img v-if="song?.img" w-330px h-330px preview-disabled :src="song.img"></img>
+      <i v-else w130px h130px animate-spin i-streamline-pixel-music-headphones-human></i>
     </div>
     <!-- 展示歌词 -->
     <div h330px overflow-hidden w-full absolute inset-0 z-100 flex-center v-if="settingStore.showLyric">
-      <LyricPanel z-30></LyricPanel>
+      <LyricPanel z-30 :song="song" :timer="songStore.timer"></LyricPanel>
     </div>
     <!-- 展示音频可视化 -->
     <div absolute bottom-0px left-0 wfull z-60 v-if="settingStore.showAudioVisualization"
       :class="{ 'bottom-70px': settingStore.focused }">
-      <VisualizationAudio></VisualizationAudio>
+      <VisualizationAudio :song="song"></VisualizationAudio>
     </div>
-    <Control></Control>
+    <Control :song="song"></Control>
   </div>
 </template>
 
 <script setup lang="ts">
+import { defineAsyncComponent } from "vue"
 import { useSettingStore } from "@/store/module/setting"
 import { useSongStore } from "@/store/module/song"
-import Control from "./Control.vue";
-import LyricPanel from "./LyricPanel.vue";
 import { computed, ref, watchPostEffect } from "vue";
-import VisualizationAudio from "./VisualizationAudio.vue";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useMessage, useLoadingBar } from "naive-ui";
 import { window as tauriWindow } from "@tauri-apps/api";
-import { getWebviewFilePath } from "@/tools";
+
+const Control = defineAsyncComponent(() => import("./Control.vue"));
+const LyricPanel = defineAsyncComponent(() => import("./LyricPanel.vue"))
+const VisualizationAudio = defineAsyncComponent(() => import("./VisualizationAudio.vue"))
 
 const settingStore = useSettingStore();
 const songStore = useSongStore();
-const pic_url = ref('')
+const song = ref<LocalMp3FileInfo | null>(null)
 
 window.$message = useMessage();
 window.$loadingBar = useLoadingBar();
 
 const title = computed(() => {
-  if (!songStore.currSong?.name) return '音乐'
-  return `${songStore.currSong.name} -- ${songStore.currSong.singer?.join('/')}`
+  if (!song || !song.value?.name) return '音乐'
+  return `${song.value.name} -- ${song.value.singer?.join('/')}`
 })
 
 const backgroundColor = computed(() => {
@@ -84,14 +85,16 @@ function minWindow() {
   tauriWindow.getCurrentWindow().minimize();
 }
 
+
 watchPostEffect(async () => {
-  const url = (await getWebviewFilePath(songStore.currSong, 'jpg')) ?? ''
-  if (url) {
-    settingStore.setMainColor(url).then(() => {
-      pic_url.value = url;
+  if (songStore.currSongKey && songStore.localList) {
+    songStore.getSong(songStore.currSongKey).then(res => {
+      song.value = res as LocalMp3FileInfo
+      settingStore.setMainColor(song.value?.img)
     })
   } else {
-    pic_url.value = ''
+    song.value = null
+    settingStore.color = 'rgb(255, 255, 255)'
   }
 })
 

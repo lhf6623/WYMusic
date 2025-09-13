@@ -1,17 +1,5 @@
-use serde::Serialize;
 use reqwest::Client;
-use std::path::PathBuf;
-
-#[derive(Serialize)]
-pub struct SongInfo {
-    pub id: String,
-    pub name: String,
-    pub singer: Vec<String>,
-    pub dt: u64,
-    pub lyric: String,
-    pub img: String,
-    pub mp3: String,
-}
+use std::path::{PathBuf, Path};
 
 // 根据 url 保存字节流到本地
 pub async fn save_bytes_to_local(
@@ -55,136 +43,56 @@ pub async fn request_file(url: String) -> Result<Vec<u8>, String> {
     Ok(bytes.to_vec())
 }
 
-/** 获取 mp3 播放时长（返回毫秒数）这里的 file_name 没有后缀 */
-pub async fn get_mp3_duration(file_name: String) -> Result<u64, String> {
-    let music_dir = dirs::audio_dir().expect("Could not find music directory");
-    let save_path = music_dir.join("WYMusic");
-    let mp3_path = save_path.join(file_name + ".mp3");
-    // 读取MP3文件元数据获取时长
-    let metadata = mp3_metadata::read_from_file(mp3_path.to_string_lossy().into_owned())
-        .map_err(|e| format!("读取MP3元数据失败: {}", e))?;
-
-    // 将Duration转换为毫秒数（使用整数运算避免浮点错误）
-    let milliseconds = metadata.duration.as_secs() * 1000 + 
-                      (metadata.duration.subsec_nanos() / 1_000_000) as u64;
-    
-    Ok(milliseconds)
-}
-
 /** 获取本地 text 文本 这里的 file_name 没有后缀 */
-pub async fn get_lyric(file_name: String) -> Result<String, String> {
+pub async fn get_lyric(path: String) -> Result<String, String> {
+    let lrc_path = Path::new(&path);
+    let lrc_path = lrc_path.with_extension("lrc");
 
-    let music_dir = dirs::audio_dir().expect("Could not find music directory");
-    let save_path = music_dir.join("WYMusic");
-
-    let txt_path = save_path.join(file_name + ".txt");
-    let lyric = std::fs::read_to_string(txt_path)
-        .map_err(|e| e.to_string())?;
-    Ok(lyric)
+    let txt = if lrc_path.exists() {
+      let lrc_data = std::fs::read(&lrc_path)
+          .map_err(|e| format!("读取歌词文件失败: {}", e))?;
+      Some(String::from_utf8(lrc_data)
+          .map_err(|e| format!("歌词文件编码错误: {}", e))?)
+    } else {
+      None
+    };
+    Ok(txt.unwrap_or_default())
 }
 
-/** 根据 file_name 获取 name singer picUrl dt lyric img mp3 */
-pub async fn get_song_info(file_name: String) -> Result<SongInfo, String> {
-    let name_arr: Vec<&str> = file_name.split(".").collect();
-    let base_name = name_arr[0..name_arr.len()-1].join(".");
-    
-    let music_dir = dirs::audio_dir().expect("Could not find music directory");
-    let wy_music_dir = music_dir.join("WYMusic").join(&file_name);
-
-    // 分割文件名获取各部分信息, 格式：[歌名]__[歌手1_#_歌手2_#_歌手3]__[ID]
-    let parts: Vec<&str> = base_name.split("__").collect();
-    if parts.len() < 3 {
-        return Err(format!("文件名格式不正确1: {:?}", parts));
-    }
-
-    // 解析ID
-    let id = parts.last().ok_or("无法获取ID部分")?;
-
-    // 解析歌曲名
-    let name = parts.first().ok_or("无法获取歌曲名部分")?;
-
-    // 解析歌手名
-    let singer = parts[1..parts.len()-1].join("__").split("_#_")
-        .map(|s| s.trim().to_string())
-        .collect::<Vec<String>>();
-
-    // 获取MP3时长， 判断 wy_music_dir 目录下是否有 mp3 文件
-    let dt = if wy_music_dir.with_extension("mp3").exists() {
-        get_mp3_duration(base_name.clone()).await?
-    } else {
-        0
-    };
-
-    // 歌词，判断 wy_music_dir 目录下是否有 txt 文件
-    let lyric = if wy_music_dir.with_extension("txt").exists() {
-        get_lyric(base_name.clone()).await?
-    } else {
-        "".to_string()
-    };
-
-    let img_url = if wy_music_dir.with_extension("jpg").exists() {
-        format!("{}", wy_music_dir.with_extension("jpg").to_string_lossy())
-    } else {
-        "".to_string()
-    };
-
-    let mp3_url = if wy_music_dir.with_extension("mp3").exists() {
-        format!("{}", wy_music_dir.with_extension("mp3").to_string_lossy())
-    } else {
-        "".to_string()
-    };
-
-    Ok(SongInfo {
-        id: id.to_string(),
-        name: name.to_string(),
-        singer,
-        dt,
-        lyric,
-        img: img_url,
-        mp3: mp3_url,
-    })
-}
-
-/** 获取WYMusic目录下所有 jpg 文件名字 suffix_type 默认为 jpg */
-pub async fn get_file_names(suffix_type: Option<String>) -> Vec<String> {
-    let suffix_type = suffix_type.unwrap_or_else(|| "jpg".to_string());
-    
-    let music_dir = dirs::audio_dir().expect("Could not find music directory");
-    let wy_music_dir = music_dir.join("WYMusic");
-    let mut file_names = Vec::new();
-
-    if let Ok(entries) = std::fs::read_dir(wy_music_dir) {
-        for entry in entries {
-            if let Ok(entry) = entry {
-                if let Some(ext) = entry.path().extension() {
-                    if ext.to_str() == Some(&suffix_type) {  // 转换为字符串再比较
-                        file_names.push(entry.path().file_name().unwrap().to_string_lossy().to_string());
-                    }
-                }
-            }
-        }
-    }
-    
-    file_names 
-}
-
-/** 根据 id 获取 get_song_info, 歌曲信息可以不齐全 */
-pub async fn get_song_list(idstr: String) -> Result<Vec<SongInfo>, String> {
-    // 解析 idstr 为 [12312,23423,453345]
-    let ids: Vec<&str> = idstr.split(',').collect();
+/** 获取 dir 目录下的所有 mp3 文件路径 */
+pub async fn get_file_path(dir: String) -> Vec<String> {
     let mut result = Vec::new();
-    // 获取本地所有的 jpg 文件名字
-    let jpg_names = get_file_names(None).await;
-    
-    for id in ids {
-        let id = id.trim();
-        // 找到目标文件名，根据文件名获取歌曲信息
-        let jpg_name = jpg_names.iter().find(|&name| name.contains(id));
-        if let Some(jpg_name) = jpg_name {
-            let song_info = get_song_info(jpg_name.to_string()).await.unwrap();
-            result.push(song_info);
-        }
-        // 如果找不到不需要处理
+
+    if dir.is_empty() {
+        return result;
     }
-    Ok(result)
+    
+    let target_dir = std::path::PathBuf::from(dir);
+
+    // 检查目录是否存在
+    if !target_dir.exists() || !target_dir.is_dir() {
+        return result;
+    }
+
+    // 读取目录内容，获取所有 mp3 文件路径
+    if let Ok(entries) = std::fs::read_dir(target_dir) {
+        result = entries
+            .flatten()
+            .filter_map(|entry| {
+                entry.file_type().ok().and_then(|file_type| {
+                    if file_type.is_file() {
+                        let path = entry.path();
+                        path.extension()
+                            .and_then(|ext| ext.to_str())
+                            .filter(|&ext| ext.eq_ignore_ascii_case("mp3"))
+                            .and_then(|_| path.to_str())
+                            .map(ToString::to_string)
+                    } else {
+                        None
+                    }
+                })
+            })
+            .collect();
+    }
+    result 
 }

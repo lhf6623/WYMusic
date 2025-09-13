@@ -6,7 +6,7 @@ import {
   getLoginStatus,
   getQrImg,
   anonimousLogin,
-} from "@/tools/api_user";
+} from "@/api/user";
 
 export interface UserStore {
   /** 二维码登入定时器 */

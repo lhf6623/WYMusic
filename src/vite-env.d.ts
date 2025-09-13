@@ -10,17 +10,8 @@ declare module "rgbaster";
 
 type MessageApi = import("naive-ui").MessageApi;
 type LoadingBarApi = import("naive-ui").LoadingBarApi;
-interface SongType {
-  id: string | number;
-  name: string;
-  singer: string[];
-  dt: number;
-  // 歌词 如果播放过应该把歌词放进来
-  lyric?: string;
-  img?: string;
-  mp3?: string;
-}
-type SongDetail = {
+
+interface SongDetail {
   name: string; // 歌曲标题
   id: number;
   ar: Array<{
@@ -38,7 +29,7 @@ type SongDetail = {
     picUrl: string;
   };
   tns: string[];
-};
+}
 type TabsType = "playList" | "dailyList" | "localList" | "search";
 type MenuOperateType =
   | "pause"
@@ -49,10 +40,28 @@ type MenuOperateType =
   | "delete"
   | "remove_play_list";
 
+interface Mp3FileInfo {
+  name: string; // 歌曲名
+  singer: string[]; // 歌手
+  dt: number; // 时长
+  album: string; // 专辑
+  img: string; // 图片 base64 编码
+}
+
+interface NetworkMp3FileInfo extends Mp3FileInfo {
+  id: string; // 网络歌曲有个id
+  lastAccessTime?: number; // 最后访问时间
+  path?: string | null; // mp3 本地实际路径
+}
+
+interface LocalMp3FileInfo extends Mp3FileInfo {
+  path: string; // mp3 本地实际路径
+  lrc: string; // 歌词
+  id?: string; // 网络歌曲id
+}
 interface Window {
   $message: MessageApi;
   $loadingBar: LoadingBarApi;
-  SongType: SongType;
   SongDetail: SongDetail;
   TabsType: TabsType;
   MenuOperateType: MenuOperateType;

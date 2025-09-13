@@ -1,5 +1,5 @@
 <template>
-  <ul px6px relative overflow-auto hfull class="*:py6px">
+  <ul px6px relative overflow-auto hfull class="*:py6px" b-t>
     <!-- 用户信息 -->
     <li flex justify-between v-if="userStatus === 'USER' && settingStore.testApiAudioUrl">
       <div flex items-center gap-10px>
@@ -54,11 +54,14 @@
     </li>
     <!-- 下载目录展示 -->
     <li>
-      <span>下载目录：</span>
-      <p>
+      <p flex mb-1 justify-between>
+        <span>音乐文件夹：</span>
+        <NButton @click="addDir" type="primary" size="tiny">添加本地文件夹</NButton>
+      </p>
+      <p v-for="dir in settingStore.audioDir" :key="dir" mb-1 last:mb-0>
         <NInputGroup>
-          <NInput disabled :value="settingStore.localAudioDir"></NInput>
-          <NButton disabled>更改</NButton>
+          <NInput size="small" disabled :value="dir"></NInput>
+          <NButton size="small" type="error" :disabled="dir === defaultDir" @click="deleteDir(dir)">删除</NButton>
         </NInputGroup>
       </p>
     </li>
@@ -72,20 +75,110 @@
         </NInputGroup>
       </p>
     </li>
+    <li>
+      <span>内存使用：{{ getByteSize(usage.usage) }}</span>
+      <NProgress type="line" :percentage="usage.percent" indicator-placement="inside"></NProgress>
+    </li>
   </ul>
 </template>
 
 <script setup lang="ts">
 import { useSettingStore } from "@/store/module/setting";
 import { useUserStore } from "@/store/module/user";
-import { computed, ref, watch } from "vue";
+import { useSongStore } from "@/store/module/song";
+import { computed, onMounted, ref, watch } from "vue";
+import { open } from "@tauri-apps/plugin-dialog";
+import { getMp3Info, getDirAllMp3Path } from "@/api/local_songs";
+import { delLocal, putLocal } from "./indexedDb/dexieTools";
+import { getByteSize } from "@/tools/index";
 
 const settingStore = useSettingStore();
 const userStore = useUserStore();
+const songStore = useSongStore();
 const login = ref(false);
 const test_login = ref(false);
+const defaultDir = ref('')
+const usage = ref({
+  /** 总空间 */
+  quota: 0,
+  /** 已使用空间 */
+  usage: 0,
+  /** 占用百分比 */
+  percent: 0
+})
 // 取消测试
 const test_controller = ref<AbortController | null>(null);
+
+const deleteDir = (dir: string) => {
+  settingStore.audioDir = settingStore.audioDir.filter((item) => item !== dir);
+
+  const del_path = songStore.localList.filter((path) => path.startsWith(dir))
+  delLocal(del_path)
+
+  // 如果删除的是当前播放的歌曲
+  const is_play = del_path.find(path => path == songStore.currSongKey);
+  if (is_play) {
+    songStore.removePlayList(is_play)
+  }
+
+  songStore.localList = songStore.localList.filter((path) => !path.startsWith(dir));
+  songStore.playList = songStore.playList.filter((path) => !path.startsWith(dir));
+}
+
+onMounted(async () => {
+  defaultDir.value = await settingStore.getDefaultAudioDir();
+  usage.value = await getUsage()
+})
+
+function addDir() {
+  open({
+    title: "添加本地文件夹",
+    multiple: false,
+    directory: true,
+    canCreateDirectories: false
+  }).then(async (dir) => {
+    if (dir) {
+      if (dir && !settingStore.audioDir.includes(dir)) {
+        settingStore.audioDir.push(dir);
+      }
+
+      const paths = await getDirAllMp3Path([dir]);
+      songStore.localList = [...new Set([...songStore.localList, ...paths])]
+      getMp3Info(paths).then(songs => {
+        putLocal(songs)
+      })
+    }
+  });
+}
+
+async function getUsage() {
+  const res = {
+    quota: 0,
+    usage: 0,
+    percent: 0
+  }
+  try {
+    if (!navigator.storage || !navigator.storage.estimate) {
+      return res;
+    }
+
+    const storageInfo = await navigator.storage.estimate();
+
+    if (!storageInfo || !storageInfo.quota || !storageInfo.usage) return res;
+
+    // 转换为人类可读的单位（字节 → MB）
+    const totalMB = storageInfo.quota.toFixed(2);
+    const usedMB = storageInfo.usage.toFixed(2);
+
+    return {
+      quota: Number(totalMB),
+      usage: Number(usedMB),
+      percent: ((Number(usedMB) / Number(totalMB)) * 10000 | 0) / 100
+    };
+  } catch (error) {
+    return res;
+  }
+}
 
 /** 游客登录 */
 function touristLogin() {

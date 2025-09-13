@@ -11,6 +11,7 @@ import {
   NInputGroup,
   NPopconfirm,
   NPopover,
+  NProgress,
   NSlider,
   NTabs,
   NTabPane,
@@ -47,6 +48,7 @@ export const useNaive = (app: App) => {
       NMessageProvider,
       NLoadingBarProvider,
       NConfigProvider,
+      NProgress,
     ],
   });
 

@@ -1,42 +1,30 @@
-import analyze from "rgbaster";
-import { join, audioDir } from "@tauri-apps/api/path";
 import { convertFileSrc } from "@tauri-apps/api/core";
 
-export async function getWebviewFilePath(
-  song?: SongType,
-  suffixType: "mp3" | "jpg" = "mp3",
-  isLocal: boolean = true
-) {
-  if (!song) return "";
+export async function getWebviewFilePath(path: string) {
+  if (!path) return "";
 
-  if (song.img && song.img.includes("https://")) {
-    return song.img;
-  }
-  const fileName = getSongName(song, suffixType);
-  const audioPath = await audioDir();
-  const filePath = await join(audioPath, "WYMusic", fileName);
-  const url = convertFileSrc(filePath, "asset");
+  const url = convertFileSrc(path, "asset");
 
-  try {
-    const res = await fetch(url);
-    if (res.status === 200) {
-      if (isLocal) {
-        return url;
+  const worker = new Worker(
+    new URL("../workers/fetch-worker.ts", import.meta.url)
+  );
+
+  worker.postMessage({ url: url });
+
+  return new Promise<string>((resolve) => {
+    // 接收结果
+    worker.onmessage = (e) => {
+      const { result, type } = e.data;
+      if (result) {
+        // 从 Worker 接收的 arrayBuffer 创建 blob 和 Object URL
+        const blob = new Blob([result], { type });
+        const url = URL.createObjectURL(blob);
+        resolve(url);
+      } else {
+        resolve("");
       }
-      const blob = await res.blob();
-      return URL.createObjectURL(blob);
-    }
-  } catch (error) {
-    return undefined;
-  }
-  return undefined;
-}
-
-export function getSongName(song: SongType, suffixType: string = "mp3") {
-  const { name, singer, id } = song;
-  const _singer = singer.join("_#_");
-  const fileName = `${name}__${_singer}__${id}`;
-  return `${fileName}.${suffixType}`;
+    };
+  });
 }
 
 export function numToTime(num?: number) {
@@ -56,12 +44,12 @@ export function numToTime(num?: number) {
 export async function getImgColor(
   imgUrl: string,
   imgRegion?: { x: number; y: number; width: number; height: number }
-): Promise<string> {
+): Promise<string[]> {
   const box_height = 330;
   const box_width = 330;
 
-  if (!imgUrl) return Promise.reject("请传入图片链接");
-  const img = await new Promise((resolve, reject) => {
+  if (!imgUrl) return Promise.reject([]);
+  return new Promise((resolve, reject) => {
     const image = new Image();
     image.crossOrigin = "Anonymous";
     image.src = imgUrl;
@@ -100,19 +88,57 @@ export async function getImgColor(
         canvas.height
       );
 
-      const base64 = canvas.toDataURL("image/jpeg", 0.5);
+      const worker = new Worker(
+        new URL("../workers/image-pixel-color.worker.ts", import.meta.url)
+      );
+      const data = ctx?.getImageData(0, 0, canvas.width, canvas.height);
+      // 获取图片上所有 像素 颜色
+      worker.postMessage({ data });
 
-      resolve(base64);
+      worker.onmessage = (e) => {
+        const { colors } = e.data;
+        resolve(colors as string[]);
+      };
     };
 
     image.onerror = () => {
-      reject("图片加载失败");
+      reject([]);
     };
   });
+}
 
-  return await analyze(img).then((res: [{ color: string }]) => {
-    const [imgObj] = res;
+export async function getBase64(url: string) {
+  // 使用 Image 加载图片
+  const image = new Image();
+  image.crossOrigin = "Anonymous";
+  image.src = url;
 
-    return imgObj?.color;
+  // 等待图片加载完成
+  await new Promise((resolve, reject) => {
+    image.onload = resolve;
+    image.onerror = reject;
   });
+
+  // 创建 canvas 元素
+  const canvas = document.createElement("canvas");
+  canvas.width = image.width;
+  canvas.height = image.height;
+
+  // 绘制图片到 canvas
+  const ctx = canvas.getContext("2d");
+  ctx?.drawImage(image, 0, 0);
+
+  // 转换为 base64 编码
+  return canvas.toDataURL("image/jpeg", 0.8);
+}
+
+/** 获取 字节 单位 */
+export function getByteSize(size: number) {
+  const units = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
+  let index = 0;
+  while (size >= 1024 && index < units.length - 1) {
+    size /= 1024;
+    index++;
+  }
+  return `${size.toFixed(2)} ${units[index]}`;
 }

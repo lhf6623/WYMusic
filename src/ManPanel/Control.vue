@@ -27,7 +27,7 @@
           </template>
         </NButton>
       </div>
-      <div text-red-600 w-full h-full flex-center gap-8px>
+      <div w-full h-full flex-center gap-8px>
         <NButton text :color="textColor" @click="playPrev">
           <template #icon>
             <i origin-center rotate-180 i-mdi:skip-forward></i>
@@ -35,7 +35,13 @@
         </NButton>
         <NButton strong secondary circle type="info" :color="textColor" @click="fn">
           <template #icon>
-            <i :class="playIcon"></i>
+            <i :class="!songStore.isPlaying ? 'i-mdi:play' : 'i-mdi:pause'" v-if="!songStore.playLoading"></i>
+            <i v-else class="dots-container">
+              <i class="dot dot-1"></i>
+              <i class="dot dot-2"></i>
+              <i class="dot dot-3"></i>
+              <i class="dot dot-4"></i>
+            </i>
           </template>
         </NButton>
         <NButton text :color="textColor" @click="playNext">
@@ -46,9 +52,10 @@
       </div>
       <div h-full absolute right-6px top-0 flex-center gap-6px>
         <NButton text @click="settingStore.showAudioView" :color="textColor">频</NButton>
-        <NButton text @click="settingStore.showLyric = !settingStore.showLyric" :color="textColor">词</NButton>
-        <NPopover :on-update:show="updateShow" :show-arrow="false" scrollable ref="popoverRef"
-          style="height: 100px; width: 20px; padding: 0"
+        <NButton text v-show="!!song?.lrc" @click="settingStore.showLyric = !settingStore.showLyric" :color="textColor">
+          词
+        </NButton>
+        <NPopover :show-arrow="false" scrollable ref="popoverRef" style="height: 100px; width: 20px; padding: 0"
           content-style="height: 100%; width: 100%; display: flex;justify-content: center;padding: 10px 0">
           <template #trigger>
             <NButton text @click="offHandle" :color="textColor">
@@ -66,13 +73,12 @@
       </div>
     </div>
     <!-- 歌曲播放条 -->
-    <div h-25px min-h-25px flex justify-center overflow-hidden v-if="songStore.currSong">
+    <div h-25px min-h-25px flex justify-center overflow-hidden v-if="songStore.currSongKey">
       <div px-6px w-full flex-center text-xs text-gray-500>
         <span inline-block mr-1>{{ numToTime(songStore.timer * 1000) }}</span>
         <NSlider :tooltip="false" :default-value="33" :theme-overrides="sliderThemeOverrides" :step="1"
-          :max="(songStore.currSong?.dt || 0) / 1000" :disabled="!songStore.currSong" v-model:value="drag"
-          :on-dragend="dragEnd" />
-        <span inline-block ml-1>{{ numToTime(songStore.currSong?.dt || 0) }}</span>
+          :max="(props.song?.dt || 0) / 1000" :disabled="!props.song" v-model:value="drag" :on-dragend="dragEnd" />
+        <span inline-block ml-1>{{ numToTime(props.song?.dt || 0) }}</span>
       </div>
     </div>
   </footer>
@@ -80,11 +86,10 @@
 
 <script setup lang="tsx">
 import type { SliderProps } from "naive-ui";
-import { ref, computed, useTemplateRef, watchPostEffect } from "vue";
+import { ref, computed, useTemplateRef, watch, onMounted } from "vue";
 import { useSettingStore } from "@/store/module/setting";
 import { useSongStore } from "@/store/module/song";
 import { useUserStore } from "@/store/module/user";
-import { throttle } from "lodash-es"
 import { numToTime } from "@/tools"
 type SliderThemeOverrides = NonNullable<SliderProps["themeOverrides"]>;
 
@@ -92,11 +97,9 @@ const songStore = useSongStore();
 const settingStore = useSettingStore();
 const userStore = useUserStore();
 const drag = ref(0);
-
-const playIcon = computed(() => {
-  const { playLoading, isPlaying } = songStore
-  return playLoading ? 'i-eos-icons-three-dots-loading' : (!isPlaying ? 'i-mdi:play' : 'i-mdi:pause')
-})
+const props = defineProps<{
+  song: null | LocalMp3FileInfo,
+}>()
 
 const backgroundColor = computed(() => {
   const [r, g, b] = settingStore.color.match(/\d+/g)!.map(Number);
@@ -115,10 +118,14 @@ const user_title = computed(() => {
 })
 
 
-watchPostEffect(throttle(() => {
+watch(() => songStore.timer, () => {
   drag.value = songStore.timer;
   !store.focused && popoverRef.value?.setShow(false);
-}, 800))
+})
+
+onMounted(() => {
+  drag.value = songStore.timer;
+})
 
 function dragEnd() {
   songStore.setSeek(drag.value || 0);
@@ -127,12 +134,12 @@ const playPrev = function () {
   songStore.playNext("prev");
 }
 const playNext = function () {
-  if (songStore.playLoading || !songStore.currSongId) return;
+  if (songStore.playLoading || !songStore.currSongKey) return;
   songStore.playNext("next");
 }
 
 const fn = function () {
-  if (songStore.playLoading || !songStore.currSongId) return
+  if (songStore.playLoading || !songStore.currSongKey) return
   !songStore.isPlaying ? songStore.play() : songStore.pause();
 }
 
@@ -171,17 +178,68 @@ const sliderSoundThemeOverrides = computed<SliderThemeOverrides>(() => {
 
 let oldVolume = songStore.volume;
 function offHandle() {
+  let volume = 0
   if (songStore.volume != 0) {
     oldVolume = songStore.volume;
-    songStore.volume = 0;
+    volume = 0;
   } else {
-    songStore.volume = oldVolume;
+    volume = oldVolume;
   }
-  songStore.audioTool?.volume(songStore.volume);
+  songStore.setVolume(volume);
 }
-const isShowRange = ref(false);
 
-function updateShow(value: boolean) {
-  isShowRange.value = value;
-}
+watch(() => songStore.volume, songStore.setVolume)
+
 </script>
+
+<style scoped lang="scss">
+@keyframes growShrink {
+
+  0%,
+  100% {
+    transform: scale(0.1);
+  }
+
+  50% {
+    transform: scale(1);
+  }
+}
+
+/* 容器统一管理渲染层 */
+.dots-container {
+  display: flex;
+  will-change: transform;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  border-radius: 100%;
+}
+
+.dot {
+  width: 4px;
+  height: 4px;
+  background-color: v-bind('textColor');
+  border-radius: 100%;
+  animation: growShrink 1.5s infinite linear;
+  transform-origin: center;
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+.dot-1 {
+  animation-delay: 0ms;
+}
+
+.dot-2 {
+  animation-delay: -200ms;
+}
+
+.dot-3 {
+  animation-delay: -400ms;
+}
+
+.dot-4 {
+  animation-delay: -600ms;
+}
+</style>

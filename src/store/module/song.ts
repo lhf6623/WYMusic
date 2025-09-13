@@ -1,26 +1,28 @@
 import { defineStore } from "pinia";
-import {
-  getSongUrlV1,
-  getSongInfo,
-  getLyric,
-  getRecommendSongs,
-} from "@/tools/api_songs";
-import { deleteFile } from "@/tools/api_local_songs";
+import { downloadRemoteSong, getRemoteDailySongs } from "@/api/songs";
+import { deleteFile } from "@/api/local_songs";
 import { versionKey } from "..";
 import dayjs from "dayjs";
 import AudioTool from "@/tools/AudioTool";
 import { throttle } from "lodash-es";
+import {
+  getLocal,
+  getNetwork,
+  delLocal,
+  putLocal,
+  putNetwork,
+} from "@/indexedDb/dexieTools";
+import { useSettingStore } from "@/store/module/setting";
+import fileListDB from "@/indexedDb/fileListDB";
 
 // 维护所有歌曲的列表，包括本地和网络歌曲，其他歌曲列表保存 id,
 export interface SongStore {
-  // 所有歌曲列表,维护一个列表，之后所有的请求都要存到这里
-  allList: SongType[];
-  // 本地歌曲列表
-  localList: (string | number)[];
-  // 播放列表
-  playList: (string | number)[];
-  // 每日推荐
-  dailyList: (string | number)[];
+  // 本地歌曲列表 歌曲实际路径 path 值
+  localList: string[];
+  // 播放列表 存 path 值，如果是网络歌曲还没有 path 值那就是 id 要添加后缀来判断 id_isNetwork
+  playList: string[];
+  // 每日推荐 存 id
+  dailyList: string[];
   // 每日推荐，一天只请求一次
   dailyListDate: string;
   /** 播放声音大小 */
@@ -30,7 +32,7 @@ export interface SongStore {
   /** 播放进度 秒 有小数位 */
   timer: number;
   /** 当前播放歌曲信息 */
-  currSongId: number | string | null;
+  currSongKey: string | null;
   // 点击播放时，有加载状态
   playLoading: boolean;
   /** 音频工具 */
@@ -44,52 +46,37 @@ export const useSongStore = defineStore("song", {
   state: (): SongStore => {
     return {
       dailyListDate: "",
-      allList: [],
       localList: [],
       dailyList: [],
       playList: [],
       volume: 1,
       isPlaying: false,
       timer: 0,
-      currSongId: null,
+      currSongKey: null,
       playLoading: false,
       audioTool: null,
     };
   },
-  getters: {
-    currSong: (state) => {
-      return state.allList.find((item) => item.id == state.currSongId);
-    },
-  },
   actions: {
+    setVolume(volume: number) {
+      this.volume = volume;
+      this.audioTool?.volume(volume);
+    },
     // 获取每日歌曲推荐
     async getDailyList() {
       if (
         this.dailyListDate == dayjs().format("YYYY-MM-DD") &&
         this.dailyList.length
-      )
+      ) {
         return;
+      }
       this.dailyListDate = dayjs().format("YYYY-MM-DD");
-      const list = await getRecommendSongs();
-      this.updateAllList(list);
+      const list = await getRemoteDailySongs();
       this.dailyList = list.map((item) => item.id);
     },
-    updateAllList(songList: SongType[]) {
-      songList.forEach((item) => {
-        const songIndex = this.allList.findIndex((song) => song.id == item.id);
-        if (songIndex > -1) {
-          this.allList[songIndex] = {
-            ...this.allList[songIndex],
-            ...item,
-          };
-        } else {
-          this.allList.push(item);
-        }
-      });
-    },
-    async delSong(id: string | number, type: TabsType) {
-      await deleteFile(id);
-      if (id == this.currSongId) {
+    async delSong(id: string, type: TabsType) {
+      await deleteFile([id]);
+      if (id == this.currSongKey) {
         this.clearSongInfo();
       }
       // 删除播放列表中的歌曲
@@ -101,27 +88,55 @@ export const useSongStore = defineStore("song", {
         this.dailyList = this.dailyList.filter((item) => item != id);
       }
 
-      this.allList = this.allList.filter((item) => item.id != id);
       this.localList = this.localList.filter((item) => item != id);
+      await delLocal([id]);
     },
-    async downSong(id: string | number) {
-      const song = this.allList.find((song) => song.id == id);
-      if (!song?.img) {
-        // 如果没有图片，就从网络下载
-        const songInfo = await getSongInfo(id);
-        this.updateAllList(songInfo);
+    isId(id: string) {
+      return !isNaN(Number(id));
+    },
+    // 目标是获取 获取本地歌曲，如果本地歌曲不存在，则获取网络表中的信息
+    async getSong(id: string) {
+      let path = "";
+      const is_id = this.isId(id);
+      if (is_id) {
+        const [song] = await getNetwork([id]);
+        if (song && song.path) {
+          path = song.path;
+        } else {
+          return song;
+        }
+      } else {
+        path = id;
       }
-      if (!song?.lyric) {
-        await getLyric(id);
-      }
-      if (!song?.mp3) {
-        await getSongUrlV1(id);
-      }
-      if (!song?.lyric || !song?.mp3 || !song?.img) {
-        const songInfo = await getSongInfo(id);
-        this.updateAllList(songInfo);
-      }
-      return this.allList.find((item) => item.id == id)!;
+      const song = await getLocal([path]);
+      return song[0];
+    },
+    async linkSong(id: string) {
+      const [songInfo] = await getNetwork([id]);
+      if (songInfo.path) return;
+
+      const file_name = `${songInfo.singer.join(",")}-${songInfo.name}.mp3`;
+      const settingStore = useSettingStore();
+      const path = await settingStore.getDefaultAudioDir(file_name);
+      const is_local = this.inLocalList(path);
+
+      if (!is_local) return;
+      const file = await fileListDB.local.get(path);
+      if (!file) return;
+      await putNetwork([{ ...songInfo, path }]);
+      const song = await putLocal([{ ...file, id }]);
+
+      return song;
+    },
+    // 播放就下载
+    async downSong(id: string): Promise<LocalMp3FileInfo> {
+      const local_song = await this.linkSong(id);
+      if (local_song) return local_song[0];
+
+      const song = await downloadRemoteSong(id);
+
+      this.localList.push(song.path);
+      return song;
     },
     /** 暂停 */
     pause() {
@@ -134,6 +149,7 @@ export const useSongStore = defineStore("song", {
     },
     async initAudioTool() {
       if (this.audioTool) {
+        this.audioTool.pause();
         return this.audioTool;
       }
       this.audioTool = new AudioTool(
@@ -174,63 +190,76 @@ export const useSongStore = defineStore("song", {
         }
       );
     },
-    async play(id?: number | string) {
+    async play(id?: string) {
       this.playLoading = true;
+      this.isPlaying = false;
+
       if (id) {
         this.clearSongInfo();
-        this.currSongId = id;
+        this.currSongKey = id;
       }
-      if (!this.currSongId) {
+      if (!this.currSongKey) {
         this.playLoading = false;
         throw new Error("播放歌曲为空");
       }
-      const song = await this.downSong(this.currSongId);
-
       if (id && !this.inPlayList(id)) {
         this.playList.push(id);
       }
       this.audioTool?.setSeek(this.timer);
-      this.audioTool?.play(song);
-      this.playLoading = false;
+      this.getSong(this.currSongKey).then(async (song) => {
+        try {
+          if (!song.path) {
+            song = await this.downSong(this.currSongKey || "");
+          }
+
+          this.audioTool?.play(song as LocalMp3FileInfo).finally(() => {
+            this.playLoading = false;
+          });
+        } catch (_e) {
+          this.playLoading = false;
+        }
+      });
     },
     /** 清空播放信息 */
     clearSongInfo() {
       this.timer = 0;
-      this.currSongId = null;
+      this.currSongKey = null;
       this.audioTool?.clearMediaSession();
       this.audioTool?.updateMediaSessionState(false);
       this.audioTool?.pause();
     },
-    inPlayList(id: number | string | null) {
+    inPlayList(id: string | null) {
       return !!this.playList.find((item) => item == id);
     },
+    inLocalList(path: string | null) {
+      return !!this.localList.find((item) => item.endsWith(path || ""));
+    },
     /** 删除播放列表 */
-    removePlayList(ids: number | string | (number | string)[]) {
+    removePlayList(ids: string | string[]) {
       const _ids = Array.isArray(ids) ? ids : [ids];
-      if (this.currSong && _ids.find((item) => item == this.currSong?.id)) {
-        this.clearSongInfo();
-      }
+
       this.playList = this.playList.filter(
         (item) => !_ids.find((id) => id == item)
       );
+      const is_play_list = this.inPlayList(this.currSongKey);
+      if (!is_play_list) {
+        this.clearSongInfo();
+      }
     },
     /** 添加到播放列表 不播放 */
-    addPlayList(ids: number | string | (number | string)[]) {
+    addPlayList(ids: string | string[]) {
       if (Array.isArray(ids)) {
         this.playList = ids;
       } else {
         if (this.inPlayList(ids)) return;
-        const song = this.playList.find((item) => item == ids);
-        if (song) {
-          this.playList.push(ids);
-        }
+        this.playList.push(ids);
       }
     },
     /** 播放下一首 */
     playNext(type: "next" | "prev") {
       if (this.playList.length === 0) return;
 
-      const index = this.playList.findIndex((id) => id == this.currSongId);
+      const index = this.playList.findIndex((id) => id == this.currSongKey);
       if (index === -1) return;
 
       let nextIndex = index + (type === "next" ? 1 : -1);

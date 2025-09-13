@@ -1,15 +1,16 @@
 <template>
-  <div hover="bg-#e2e8fe" :data-id="`${type}_${songId}`" ref="songRef" class="group flex cursor-pointer select-none"
-    @dblclick="play()" :class="songId == songStore.currSongId ? 'bg-#e2e8fe' : ''">
+  <div hover="bg-#e2e8fe" v-show="show" :data-id="`${type}_${songKey}`" ref="songRef"
+    class="group flex cursor-pointer select-none" @dblclick="play()"
+    :class="songKey == songStore.currSongKey ? 'bg-#e2e8fe' : ''">
     <p w30px flex-shrink-0 flex-center text="#8990a2" cursor-pointer>
-      <span v-if="songStore.currSong?.id != songId">
+      <span v-if="songStore.currSongKey != songKey">
         <span inline-block group-hover-hidden>{{ index + 1 }}</span>
         <span text-2xl hidden group-hover-inline-block i-mdi-play @click="play()"></span>
       </span>
       <span v-else :class="songStore.isPlaying ? 'i-mdi-pause' : 'i-mdi-play'" text-2xl @click="play()"></span>
     </p>
     <div flex w300px overflow-hidden text="#283248" items-center h50px relative>
-      <NImage preview-disabled :src="pic_url" w40px h40px rounded mr4px />
+      <NImage preview-disabled :src="song?.img" w40px h40px rounded mr4px />
       <div flex-1 truncate relative>
         <p truncate>
           {{ song?.name }}
@@ -39,8 +40,8 @@
 
 <script setup lang="ts">
 import { useSongStore } from "@/store/module/song";
-import { ref, onMounted, computed, useTemplateRef, onUnmounted } from "vue";
-import { getWebviewFilePath, numToTime } from "@/tools/index";
+import { ref, onMounted, useTemplateRef, onUnmounted, computed } from "vue";
+import { numToTime } from "@/tools/index";
 import { useMenuInject } from "./useMenuContext"
 
 const songStore = useSongStore();
@@ -49,17 +50,17 @@ const songRef = useTemplateRef<HTMLDivElement>('songRef')
 
 const props = defineProps<{
   index: number;
-  songId: number | string,
-  type: string
+  songKey: string,
+  type: string,
+  filter: string
 }>();
 
-const song = computed(() => {
-  const song = songStore.allList.find((item) => item.id == props.songId)
-  return song
+const song = ref<Mp3FileInfo>()
+
+const show = computed(() => {
+  if (!props.filter) return true
+  return song.value?.name.includes(props.filter) || song.value?.singer.join('/').includes(props.filter)
 })
-
-const pic_url = ref('')
-
 
 const intersectionObserver = new IntersectionObserver((entries) => {
   // 如果 intersectionRatio 为 0，则目标在视野外，
@@ -70,9 +71,10 @@ const intersectionObserver = new IntersectionObserver((entries) => {
 });
 // 这里需要优化一下，在显示的时候才获取地址
 const get_pic_url = async () => {
-  pic_url.value = await getWebviewFilePath(song.value, 'jpg') ?? ''
-  // 展示后，取消监听
-  songRef.value && intersectionObserver.unobserve(songRef.value);
+  songStore.getSong(props.songKey).then(res => {
+    song.value = res
+    songRef.value && intersectionObserver.unobserve(songRef.value);
+  })
 }
 
 onMounted(() => {
@@ -85,12 +87,12 @@ onUnmounted(() => {
 })
 
 function changeShowMenu(e: MouseEvent) {
-  showMenu(props.songId, e.clientX, e.clientY, true)
+  showMenu(props.songKey, e.clientX, e.clientY, true)
 }
 
 async function play() {
   // 当前播放歌曲
-  if (songStore.currSongId == props.songId) {
+  if (songStore.currSongKey == props.songKey) {
     // 是否在播放
     if (!songStore.isPlaying) {
       songStore.play()
@@ -101,12 +103,13 @@ async function play() {
   }
 
   // 已经在播放列表
-  if (songStore.inPlayList(props.songId)) {
-    songStore.play(props.songId);
+  if (songStore.inPlayList(props.songKey)) {
+    songStore.play(props.songKey);
     return;
   }
 
-  songStore.addPlayList(props.songId);
-  songStore.play(props.songId);
+  songStore.setSeek(0)
+  songStore.addPlayList(props.songKey);
+  songStore.play(props.songKey);
 }
 </script>

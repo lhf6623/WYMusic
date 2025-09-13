@@ -20,13 +20,13 @@ type MediaSessionOpt = {
 export default class AudioTool {
   private opt: AudioToolOpt;
   audio: HTMLAudioElement | null = null;
-  imgCacheURL: string[] = [];
   mp3CacheURL: string[] = [];
   currentTime: number = 0;
   mediaSessionOpt: MediaSessionOpt | null = null;
   ctx: AudioContext | null = null;
   source: MediaElementAudioSourceNode | null = null;
   analyser: AnalyserNode | null = null;
+  gainNode: GainNode | null = null;
   constructor(opt: AudioToolOpt, mediaSessionOpt: MediaSessionOpt) {
     this.opt = opt;
     this.mediaSessionOpt = mediaSessionOpt;
@@ -34,42 +34,53 @@ export default class AudioTool {
     this.ctx = new AudioContext();
     this.source = this.ctx.createMediaElementSource(this.audio);
     this.analyser = this.ctx.createAnalyser();
+    this.gainNode = this.ctx.createGain();
 
     this.source.connect(this.analyser);
-    this.analyser.connect(this.ctx.destination);
+    this.analyser.connect(this.gainNode);
+    this.gainNode.connect(this.ctx.destination);
 
     this.audio.addEventListener("play", this.opt.onplay);
     this.audio.addEventListener("pause", this.opt.onpause);
     this.audio.addEventListener("ended", this.opt.onended);
     this.audio.addEventListener("timeupdate", this.opt.ontimeupdate);
   }
-  /** 播放, 如果没有值，应该是媒体控制那里点的播放 */
-  async play(song?: SongType) {
-    const [mp3, cacheUrl] = this.mp3CacheURL;
+  async load(song?: LocalMp3FileInfo) {
+    const [path, cacheUrl] = this.mp3CacheURL;
 
     if (!this.audio) throw new Error("初始化");
 
-    if (!this.audio.src || (song && mp3 !== song.mp3)) {
+    if (!this.audio.src || (song && path !== song.path)) {
       cacheUrl && URL.revokeObjectURL(cacheUrl);
 
-      this.audio.src = (await getWebviewFilePath(song, "mp3", false))!;
+      const src = await getWebviewFilePath(song?.path!);
 
-      this.mp3CacheURL = [song?.mp3!, this.audio.src];
+      if (!src) {
+        window.$message.error("获取文件路径失败");
+        this.mp3CacheURL = [];
+        return;
+      } else {
+        this.mp3CacheURL = [song?.path!, this.audio.src];
+      }
+      this.audio.src = src;
       this.audio.load();
     }
-
-    this.setSeek(this.currentTime);
-    this.audio!.play()
-      .then(() => {
-        if (song) {
-          this.updateMediaMetadata(song);
-          this.initMediaSession();
-        }
-        this.updateMediaSessionState(true);
-      })
-      .catch(() => {
-        this.updateMediaSessionState(false);
-      });
+  }
+  async play(song?: LocalMp3FileInfo) {
+    this.load(song).then(() => {
+      this.setSeek(this.currentTime);
+      this.audio!.play()
+        .then(() => {
+          if (song) {
+            this.updateMediaMetadata(song);
+            this.initMediaSession();
+          }
+          this.updateMediaSessionState(true);
+        })
+        .catch(() => {
+          this.updateMediaSessionState(false);
+        });
+    });
   }
   /** 暂停 */
   pause() {
@@ -91,31 +102,24 @@ export default class AudioTool {
     this.audio.removeEventListener("timeupdate", this.opt.ontimeupdate);
   }
   volume(num: number) {
-    this.audio!.volume = num;
+    this.gainNode!.gain.value = num;
   }
   // 通知系统
-  async updateMediaMetadata(song: SongType) {
-    const [img, cacheUrl] = this.imgCacheURL;
-    if (img && img === song.img) return;
-
-    const src = (await getWebviewFilePath(song, "jpg", false))!;
-    this.imgCacheURL = [song.img!, src];
-
+  async updateMediaMetadata(song: Mp3FileInfo) {
     const metadata = new MediaMetadata({
       title: song.name,
       artist: song.singer.join(", "),
       album: "wy-music",
       artwork: [
         {
-          src,
+          // 这里的 img 已经是 base64 的数据格式
+          src: song.img,
           sizes: "1000x1000",
           type: "image/jpeg",
         },
       ],
     });
     navigator.mediaSession.metadata = metadata;
-    // 能走到这里的流程，说明图片是新的，需要清除旧的
-    cacheUrl && URL.revokeObjectURL(cacheUrl);
   }
   // 更新媒体会话状态
   updateMediaSessionState(playing: boolean) {
