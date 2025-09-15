@@ -14,7 +14,7 @@ export default async function initTask() {
   songStore.isPlaying = false;
   songStore.playLoading = false;
 
-  settingStore.color = "rgb(255, 255, 255)";
+  settingStore.setMainColor("");
 
   settingStore.updateWindowTop(settingStore.windowTop);
 

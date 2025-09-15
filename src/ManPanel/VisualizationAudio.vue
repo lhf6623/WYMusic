@@ -5,7 +5,7 @@
 </template>
 
 <script setup lang="ts">
-import { useTemplateRef, onUnmounted, computed, watchPostEffect } from 'vue';
+import { useTemplateRef, onUnmounted, watchPostEffect } from 'vue';
 import { useSongStore } from "@/store/module/song";
 import { useSettingStore } from "@/store/module/setting";
 
@@ -18,15 +18,6 @@ let cleanup: (() => void) | undefined = undefined;
 const props = defineProps<{
   song: null | LocalMp3FileInfo,
 }>()
-
-
-// 条纹顶部色
-const stripeTopColor = computed(() => {
-  if (!settingStore.color) return 'rgb(0, 0, 0)'
-  const [r, g, b] = settingStore.color.match(/\d+/g)!.map(Number);
-  // 顶部颜色取反
-  return `rgb(${255 - r}, ${255 - g}, ${255 - b})`
-})
 
 // 绘制音频可视化条纹
 const drawVisualization = () => {
@@ -61,7 +52,7 @@ const drawVisualization = () => {
 
       // 创建渐变颜色
       const gradient = ctx.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
-      gradient.addColorStop(0, stripeTopColor.value); // 顶部颜色
+      gradient.addColorStop(0, settingStore.textColor); // 顶部颜色
       gradient.addColorStop(1, settingStore.color); // 底部颜色
 
       ctx.fillStyle = gradient;
@@ -76,7 +67,7 @@ const drawVisualization = () => {
       // 进度条
       const gradient = ctx.createLinearGradient(0, canvas.height - 2, canvas.width * progress, canvas.height - 2);
       gradient.addColorStop(0, settingStore.color); // 顶部颜色
-      gradient.addColorStop(1, stripeTopColor.value); // 底部颜色
+      gradient.addColorStop(1, settingStore.textColor); // 底部颜色
       ctx.fillStyle = gradient;
       ctx.fillRect(0, canvas.height - 2, canvas.width * progress, 2);
     }

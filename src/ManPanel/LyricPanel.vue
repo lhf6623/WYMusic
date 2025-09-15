@@ -67,11 +67,6 @@ function timeToSeconds(timeString: string) {
   return res + Number(lastNum) / Math.pow(10, lastNum?.length)
 }
 
-const text_color = computed(() => {
-  const [r, g, b] = settingStore.color.match(/\d+/g)!.map(Number);
-  return `rgba(${255 - r}, ${255 - g}, ${255 - b}, 1)`
-})
-
 const text_shadow_color = computed(() => {
   const [r, g, b] = settingStore.color.match(/\d+/g)!.map(Number);
   return `0 0 3px rgba(${r}, ${g}, ${b}, 1)`
@@ -88,7 +83,7 @@ const backgroundColor = computed(() => {
 <style scoped>
 .lrc-panel {
   display: v-bind('showPanel');
-  color: v-bind('text_color');
+  color: v-bind('settingStore.textColor');
   text-shadow: v-bind('text_shadow_color');
   /* 背景渐变 上中下 中间黑色，上下透明 */
   background: v-bind('backgroundColor');

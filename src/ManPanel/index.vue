@@ -5,8 +5,8 @@
         'h-40px min-h-40px': settingStore.focused,
         'h-0px': !settingStore.focused
       }" :style="{
-        background: backgroundColor,
-        color: textColor
+        background: settingStore.backgroundColor,
+        color: settingStore.textColor
       }">
       <div w16px hfull absolute flex-center left-0 top-0 flex-col px4px>
         <button hover-op-80 active-op-60 i-mdi:window-close @click="hideWindow"></button>
@@ -18,7 +18,7 @@
         </span>
       </p>
       <div absolute flex-center top-0 right-0 hfull px-6px>
-        <NButton :type="!settingStore.windowTop ? 'tertiary' : 'info'" :color="textColor" text
+        <NButton :type="!settingStore.windowTop ? 'tertiary' : 'info'" :color="settingStore.textColor" text
           @click="settingStore.updateWindowTop()" :class="settingStore.windowTop ? '-rotate-45' : 'rotate-0'">
           <template #icon>
             <i class="i-la:thumbtack"></i>
@@ -69,17 +69,9 @@ const title = computed(() => {
   return `${song.value.name} -- ${song.value.singer?.join('/')}`
 })
 
-const backgroundColor = computed(() => {
-  const [r, g, b] = settingStore.color.match(/\d+/g)!.map(Number);
-  return `rgba(${r}, ${g}, ${b}, 0.75)`
-})
-const textColor = computed(() => {
-  const [r, g, b] = settingStore.color.match(/\d+/g)!.map(Number);
-  return `rgba(${255 - r}, ${255 - g}, ${255 - b}, 1)`
-})
-
 function hideWindow() {
-  tauriWindow.getCurrentWindow().close();
+  // 隐藏窗口
+  tauriWindow.getCurrentWindow().hide();
 }
 function minWindow() {
   tauriWindow.getCurrentWindow().minimize();
@@ -94,7 +86,7 @@ watchPostEffect(async () => {
     })
   } else {
     song.value = null
-    settingStore.color = 'rgb(255, 255, 255)'
+    settingStore.setMainColor('')
   }
 })
 

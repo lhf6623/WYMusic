@@ -15,10 +15,11 @@ pub fn setup_plugins<R: Runtime>(builder: Builder<R>) -> Builder<R> {
         
         // 单例实例插件，确保只有一个应用实例运行
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            // 聚焦窗口
-            let window = app.get_webview_window("main").unwrap();
-            window.show().unwrap();
-            window.set_focus().unwrap();
+            // 当检测到已有实例运行时，显示并聚焦主窗口
+            if let Some(window) = app.get_webview_window("main") {
+                window.show().unwrap();
+                window.set_focus().unwrap();
+            }
         }))
 
         // 持久化插件，用于持久化应用程序状态 

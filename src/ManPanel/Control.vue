@@ -1,8 +1,8 @@
 <template>
   <footer flex flex-col justify-center w-full select-none absolute overflow-hidden bottom-0 z-200 transition-all :style="{
     height: settingStore.focused ? '70px' : '0px',
-    background: backgroundColor,
-    color: textColor
+    background: settingStore.backgroundColor,
+    color: settingStore.textColor
   }">
     <!-- 控制 -->
     <div h-35px min-h-35px relative>
@@ -14,26 +14,26 @@
         }" cursor-pointer @click="showBottomPanel('setting')" :title="user_title">
           <template #default>
             <img v-show="!!userStore.profile?.avatarUrl" :src="userStore.profile?.avatarUrl" />
-            <NButton v-show="!userStore.profile?.avatarUrl" text :color="textColor">
+            <NButton v-show="!userStore.profile?.avatarUrl" text :color="settingStore.textColor">
               <template #icon>
                 <i i-solar:user-rounded-outline w20px h20px></i>
               </template>
             </NButton>
           </template>
         </NAvatar>
-        <NButton @click="showBottomPanel('song_list')" text title="底部播放列表" :color="textColor">
+        <NButton @click="showBottomPanel('song_list')" text title="底部播放列表" :color="settingStore.textColor">
           <template #icon>
             <i i-mdi:menu w20px h20px></i>
           </template>
         </NButton>
       </div>
       <div w-full h-full flex-center gap-8px>
-        <NButton text :color="textColor" @click="playPrev">
+        <NButton text :color="settingStore.textColor" @click="playPrev">
           <template #icon>
             <i origin-center rotate-180 i-mdi:skip-forward></i>
           </template>
         </NButton>
-        <NButton strong secondary circle type="info" :color="textColor" @click="fn">
+        <NButton strong secondary circle type="info" :color="settingStore.textColor" @click="fn">
           <template #icon>
             <i :class="!songStore.isPlaying ? 'i-mdi:play' : 'i-mdi:pause'" v-if="!songStore.playLoading"></i>
             <i v-else class="dots-container">
@@ -44,21 +44,22 @@
             </i>
           </template>
         </NButton>
-        <NButton text :color="textColor" @click="playNext">
+        <NButton text :color="settingStore.textColor" @click="playNext">
           <template #icon>
             <i i-mdi:skip-forward></i>
           </template>
         </NButton>
       </div>
       <div h-full absolute right-6px top-0 flex-center gap-6px>
-        <NButton text @click="settingStore.showAudioView" :color="textColor">频</NButton>
-        <NButton text v-show="!!song?.lrc" @click="settingStore.showLyric = !settingStore.showLyric" :color="textColor">
+        <NButton text @click="settingStore.showAudioView" :color="settingStore.textColor">频</NButton>
+        <NButton text v-show="!!song?.lrc" @click="settingStore.showLyric = !settingStore.showLyric"
+          :color="settingStore.textColor">
           词
         </NButton>
         <NPopover :show-arrow="false" scrollable ref="popoverRef" style="height: 100px; width: 20px; padding: 0"
           content-style="height: 100%; width: 100%; display: flex;justify-content: center;padding: 10px 0">
           <template #trigger>
-            <NButton text @click="offHandle" :color="textColor">
+            <NButton text @click="offHandle" :color="settingStore.textColor">
               <template #icon>
                 <i :class="`w-20px h-20px  ${songStore.volume == 0
                   ? 'i-iconoir:sound-off'
@@ -100,15 +101,6 @@ const drag = ref(0);
 const props = defineProps<{
   song: null | LocalMp3FileInfo,
 }>()
-
-const backgroundColor = computed(() => {
-  const [r, g, b] = settingStore.color.match(/\d+/g)!.map(Number);
-  return `rgba(${r}, ${g}, ${b}, 0.75)`
-})
-const textColor = computed(() => {
-  const [r, g, b] = settingStore.color.match(/\d+/g)!.map(Number);
-  return `rgba(${255 - r}, ${255 - g}, ${255 - b}, 1)`
-})
 
 const user_title = computed(() => {
   if (userStore.cookie) {
@@ -154,11 +146,11 @@ function showBottomPanel(value: 'song_list' | 'setting') {
 
 const sliderThemeOverrides = computed<SliderThemeOverrides>(() => {
   return {
-    fillColor: textColor.value,
-    fillColorHover: textColor.value,
+    fillColor: settingStore.textColor,
+    fillColorHover: settingStore.textColor,
     railHeight: "4px",
     handleSize: "12px",
-    handleColor: textColor.value,
+    handleColor: settingStore.textColor,
   }
 });
 
@@ -168,9 +160,9 @@ const store = useSettingStore();
 
 const sliderSoundThemeOverrides = computed<SliderThemeOverrides>(() => {
   return {
-    fillColor: textColor.value,
-    fillColorHover: textColor.value,
-    handleColor: textColor.value,
+    fillColor: settingStore.textColor,
+    fillColorHover: settingStore.textColor,
+    handleColor: settingStore.textColor,
     railWidthVertical: "8px",
     handleSize: "8px",
   }
@@ -219,7 +211,7 @@ watch(() => songStore.volume, songStore.setVolume)
 .dot {
   width: 4px;
   height: 4px;
-  background-color: v-bind('textColor');
+  background-color: v-bind('settingStore.textColor');
   border-radius: 100%;
   animation: growShrink 1.5s infinite linear;
   transform-origin: center;

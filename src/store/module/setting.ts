@@ -4,6 +4,7 @@ import { getImgColor } from "@/tools";
 
 import { join, audioDir } from "@tauri-apps/api/path";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { TrayIcon } from "@tauri-apps/api/tray";
 
 export interface SettingStore {
   /** 应用是否被聚焦 */
@@ -43,6 +44,16 @@ export const useSettingStore = defineStore("setting", {
       windowTop: false,
     };
   },
+  getters: {
+    textColor(): string {
+      const [r, g, b] = this.color.match(/\d+/g)!.map(Number);
+      return `rgba(${255 - r}, ${255 - g}, ${255 - b}, 1)`;
+    },
+    backgroundColor(): string {
+      const [r, g, b] = this.color.match(/\d+/g)!.map(Number);
+      return `rgba(${r}, ${g}, ${b}, 0.75)`;
+    },
+  },
   actions: {
     showAudioView() {
       this.showAudioVisualization = !this.showAudioVisualization;
@@ -62,6 +73,10 @@ export const useSettingStore = defineStore("setting", {
     },
     /** 获取主色调 */
     setMainColor(url: string) {
+      if (!url) {
+        this.color = "rgb(255, 255, 255)";
+        return;
+      }
       // 耗时任务，不要同步代码
       return getImgColor(url).then((_color) => {
         this.color = _color[0] ?? "rgb(255, 255, 255)";

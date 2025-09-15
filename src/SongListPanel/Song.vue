@@ -1,36 +1,38 @@
 <template>
   <div hover="bg-#e2e8fe" v-show="show" :data-id="`${type}_${songKey}`" ref="songRef"
-    class="group flex cursor-pointer select-none" @dblclick="play()"
     :class="songKey == songStore.currSongKey ? 'bg-#e2e8fe' : ''">
-    <p w30px flex-shrink-0 flex-center text="#8990a2" cursor-pointer>
-      <span v-if="songStore.currSongKey != songKey">
-        <span inline-block group-hover-hidden>{{ index + 1 }}</span>
-        <span text-2xl hidden group-hover-inline-block i-mdi-play @click="play()"></span>
-      </span>
-      <span v-else :class="songStore.isPlaying ? 'i-mdi-pause' : 'i-mdi-play'" text-2xl @click="play()"></span>
-    </p>
-    <div flex w300px overflow-hidden text="#283248" items-center h50px relative>
-      <NImage preview-disabled :src="song?.img" w40px h40px rounded mr4px />
-      <div flex-1 truncate relative>
-        <p truncate>
-          {{ song?.name }}
-        </p>
-        <p truncate text="#7b8290 12px">
-          {{ song?.singer.join('/') }}
-        </p>
-      </div>
-      <div flex-center hfull>
-        <div relative text="#8990a2" flex-center gap-6px p4px rounded z-100>
+    <div v-if="!song" h50px>加载中...</div>
+    <div v-else group flex cursor-pointer select-none @dblclick="play()">
+      <p w30px flex-shrink-0 flex-center text="#8990a2" cursor-pointer>
+        <span v-if="songStore.currSongKey != songKey">
+          <span inline-block group-hover-hidden>{{ index + 1 }}</span>
+          <span text-2xl hidden group-hover-inline-block i-mdi-play @click="play()"></span>
+        </span>
+        <span v-else :class="songStore.isPlaying ? 'i-mdi-pause' : 'i-mdi-play'" text-2xl @click="play()"></span>
+      </p>
+      <div flex w300px overflow-hidden text="#283248" items-center h50px relative>
+        <NImage preview-disabled :src="song?.img" w40px h40px rounded mr4px />
+        <div flex-1 truncate relative>
+          <p truncate>
+            {{ song?.name }}
+          </p>
+          <p truncate text="#7b8290 12px">
+            {{ song?.singer.join('/') }}
+          </p>
+        </div>
+        <div flex-center hfull>
+          <div relative text="#8990a2" flex-center gap-6px p4px rounded z-100>
 
-          <div>{{ numToTime(song?.dt) }}</div>
-          <div w20px flex-center hfull>
-            <span hfull hidden flex-center group-hover:flex>
-              <NButton text @click="changeShowMenu">
-                <template #icon>
-                  <i i-solar:menu-dots-bold></i>
-                </template>
-              </NButton>
-            </span>
+            <div>{{ numToTime(song?.dt) }}</div>
+            <div w20px flex-center hfull>
+              <span hfull hidden flex-center group-hover:flex>
+                <NButton text @click="changeShowMenu">
+                  <template #icon>
+                    <i i-solar:menu-dots-bold></i>
+                  </template>
+                </NButton>
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -71,9 +73,13 @@ const intersectionObserver = new IntersectionObserver((entries) => {
 });
 // 这里需要优化一下，在显示的时候才获取地址
 const get_pic_url = async () => {
+  if (song.value) return
   songStore.getSong(props.songKey).then(res => {
     song.value = res
-    songRef.value && intersectionObserver.unobserve(songRef.value);
+    songRef.value && song.value && intersectionObserver.unobserve(songRef.value);
+  }).catch(() => {
+
+    song.value = undefined
   })
 }
 
