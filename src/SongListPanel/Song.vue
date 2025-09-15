@@ -2,7 +2,7 @@
   <div hover="bg-#e2e8fe" v-show="show" :data-id="`${type}_${songKey}`" ref="songRef"
     :class="songKey == songStore.currSongKey ? 'bg-#e2e8fe' : ''">
     <div v-if="!song" h50px>加载中...</div>
-    <div v-else group flex cursor-pointer select-none @dblclick="play()">
+    <div v-else class="group" flex cursor-pointer select-none @dblclick="play()">
       <p w30px flex-shrink-0 flex-center text="#8990a2" cursor-pointer>
         <span v-if="songStore.currSongKey != songKey">
           <span inline-block group-hover-hidden>{{ index + 1 }}</span>

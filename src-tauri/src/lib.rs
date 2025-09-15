@@ -24,8 +24,8 @@ pub fn run() {
     app_with_commands
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
-        // 解决macos下点击dock图标不显示窗口的问题
         .run(|app_handle, event| match event {
+            #[cfg(target_os = "macos")]
             tauri::RunEvent::Reopen { has_visible_windows, .. } => {
                 if !has_visible_windows {
                     if let Some(window) = app_handle.get_webview_window("main") {
