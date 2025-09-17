@@ -6,6 +6,8 @@ import { zhCN, dateZhCN } from "naive-ui";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { LogicalSize } from "@tauri-apps/api/dpi";
 import initTask from "@/tools/initTask";
+import { createAppTray } from "@/tools/appTray";
+import { createAppMenu } from "@/tools/appMenu";
 
 const ManPanel = defineAsyncComponent(() => import("./ManPanel/index.vue"));
 const SongListPanel = defineAsyncComponent(() => import("./SongListPanel/index.vue"));
@@ -14,7 +16,11 @@ const Setting = defineAsyncComponent(() => import("./Setting.vue"))
 const settingStore = useSettingStore();
 const app = getCurrentWindow();
 
-onMounted(initTask);
+onMounted(async () => {
+  initTask();
+  createAppTray();
+  createAppMenu()
+});
 
 onUnmounted(initTask)
 

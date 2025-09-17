@@ -20,6 +20,11 @@
     "dialog:allow-open",
     "dialog:allow-save",
     "fs:default",
+    "fs:allow-app-read-recursive",
+    "fs:allow-app-meta-recursive",
+    "fs:allow-open",
+    "fs:allow-read",
+    "fs:allow-create",
     "core:app:allow-default-window-icon",
     "core:window:allow-set-skip-taskbar"
   ]

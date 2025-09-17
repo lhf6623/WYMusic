@@ -4,6 +4,7 @@ import { getImgColor } from "@/tools";
 
 import { join, audioDir } from "@tauri-apps/api/path";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { TrayIcon } from "@tauri-apps/api/tray";
 
 export interface SettingStore {
   /** 应用是否被聚焦 */
@@ -24,6 +25,7 @@ export interface SettingStore {
   testApiAudioUrl: boolean;
   /** 窗口置顶 */
   windowTop: boolean;
+  tray: TrayIcon | null;
 }
 
 export const useSettingStore = defineStore("setting", {
@@ -41,6 +43,7 @@ export const useSettingStore = defineStore("setting", {
       showAudioVisualization: true,
       testApiAudioUrl: false,
       windowTop: false,
+      tray: null,
     };
   },
   getters: {

@@ -1,30 +1,13 @@
-import { convertFileSrc } from "@tauri-apps/api/core";
+import { readFile } from "@tauri-apps/plugin-fs";
 
 export async function getWebviewFilePath(path: string) {
   if (!path) return "";
 
-  const url = convertFileSrc(path, "asset");
-
-  const worker = new Worker(
-    new URL("../workers/fetch-worker.ts", import.meta.url)
-  );
-
-  worker.postMessage({ url: url });
-
-  return new Promise<string>((resolve) => {
-    // 接收结果
-    worker.onmessage = (e) => {
-      const { result, type } = e.data;
-      if (result) {
-        // 从 Worker 接收的 arrayBuffer 创建 blob 和 Object URL
-        const blob = new Blob([result], { type });
-        const url = URL.createObjectURL(blob);
         resolve(url);
-      } else {
-        resolve("");
-      }
-    };
-  });
+  const buffer = await readFile(path);
+  const blob = new Blob([buffer]);
+  const url = URL.createObjectURL(blob);
+  return url;
 }
 
 export function numToTime(num?: number) {

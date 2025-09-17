@@ -1,13 +1,8 @@
 /**
- * 歌曲命名规则
- * 格式：[歌手1,歌手2,歌手3]-[歌名].mp3
- * 例如：王万-我好想你.mp3
-*/
-
-/**
  * Tauri 命令模块 - 包含所有可供前端调用的 Rust 函数
  */
 use tauri::Runtime;
+use std::path::Path;
 
 use crate::tools::{save_bytes_to_local, request_file, get_file_path};
 use crate::mp3_tools::{Mp3MetadataInfo, get_mp3_metadata, set_mp3_metadata};
@@ -76,9 +71,20 @@ async fn get_paths_by_dir(dirs: Vec<String>) -> Vec<String> {
 async fn delete_file(paths: Vec<String>) -> Vec<String> {
     let mut result = Vec::new();
     for path in paths {
-        if let Err(_) = std::fs::remove_file(&path) {
+
+        let file_path = Path::new(&path);
+        let lrc_path = file_path.with_extension("lrc");
+        if lrc_path.exists() {
+            if let Err(e) = std::fs::remove_file(&lrc_path) {
+                eprintln!("删除歌词文件失败: {}", e);
+            }
+        }
+
+        if let Err(e) = std::fs::remove_file(&file_path) {
+            eprintln!("删除文件失败: {}", e);
             result.push(path);
         }
+        
     }
     result
 }
