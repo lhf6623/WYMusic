@@ -136,7 +136,7 @@ const fn = function () {
 }
 
 // 歌曲列表
-function showBottomPanel(value: 'song_list' | 'setting') {
+function showBottomPanel(value: BottomPanelType) {
   if (settingStore.showBottomPanel === value) {
     settingStore.showBottomPanel = null;
   } else {
@@ -184,7 +184,7 @@ watch(() => songStore.volume, songStore.setVolume)
 
 </script>
 
-<style scoped lang="scss">
+<style scoped>
 @keyframes growShrink {
 
   0%,

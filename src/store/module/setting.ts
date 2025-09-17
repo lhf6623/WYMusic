@@ -14,7 +14,7 @@ export interface SettingStore {
   /** 主色调 */
   color: string;
   /** 底部面板展示 */
-  showBottomPanel: "song_list" | "setting" | null;
+  showBottomPanel: BottomPanelType;
   /** 本地音频目录 */
   audioDir: string[];
   /** 请求地址 */

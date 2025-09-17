@@ -27,15 +27,10 @@
       "assetProtocol": {
         "enable": true,
         "scope": [
-          "$APPDATA/*",
-          "$HOME/Music/WYMusic/*"
+          "$APPDATA/**",
+          "$AUDIO/WYMusic/**"
         ]
       }
-    }
-  },
-  "plugins": {
-    "fs": {
-      "requireLiteralLeadingDot": true
     }
   },
   "bundle": {

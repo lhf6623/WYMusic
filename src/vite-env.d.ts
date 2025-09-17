@@ -6,8 +6,6 @@ declare module "*.vue" {
   export default component;
 }
 
-declare module "rgbaster";
-
 type MessageApi = import("naive-ui").MessageApi;
 type LoadingBarApi = import("naive-ui").LoadingBarApi;
 
@@ -30,6 +28,7 @@ interface SongDetail {
   };
   tns: string[];
 }
+type BottomPanelType = "song_list" | "setting" | null;
 type TabsType = "playList" | "dailyList" | "localList" | "search";
 type MenuOperateType =
   | "pause"

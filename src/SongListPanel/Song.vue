@@ -49,6 +49,7 @@ import { useMenuInject } from "./useMenuContext"
 const songStore = useSongStore();
 const { showMenu } = useMenuInject()
 const songRef = useTemplateRef<HTMLDivElement>('songRef')
+const retryCount = ref(0);
 
 const props = defineProps<{
   index: number;
@@ -69,17 +70,25 @@ const intersectionObserver = new IntersectionObserver((entries) => {
   // 我们不需要做任何事情。
   if (entries[0].intersectionRatio <= 0) return;
 
-  get_pic_url();
+  show_song();
 });
-// 这里需要优化一下，在显示的时候才获取地址
-const get_pic_url = async () => {
+// 这里需要优化一下，在显示的时候才获取地址,重试3次
+const show_song = async () => {
+
   if (song.value) return
   songStore.getSong(props.songKey).then(res => {
     song.value = res
+    if (retryCount.value < 3 && song.value === undefined) {
+      retryCount.value++
+      setTimeout(show_song, 1000);
+    }
     songRef.value && song.value && intersectionObserver.unobserve(songRef.value);
   }).catch(() => {
-
     song.value = undefined
+    if (retryCount.value < 3) {
+      retryCount.value++
+      setTimeout(show_song, 1000);
+    }
   })
 }
 

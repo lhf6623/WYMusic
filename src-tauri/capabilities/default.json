@@ -26,6 +26,17 @@
     "fs:allow-read",
     "fs:allow-create",
     "core:app:allow-default-window-icon",
-    "core:window:allow-set-skip-taskbar"
+    "core:window:allow-set-skip-taskbar",
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        {
+          "path": "$APPDATA/**"
+        },
+        {
+          "path": "$AUDIO/WYMusic/**"
+        }
+      ]
+    }
   ]
 }
