@@ -3,7 +3,6 @@ import { readFile } from "@tauri-apps/plugin-fs";
 export async function getWebviewFilePath(path: string) {
   if (!path) return "";
 
-        resolve(url);
   const buffer = await readFile(path);
   const blob = new Blob([buffer]);
   const url = URL.createObjectURL(blob);
