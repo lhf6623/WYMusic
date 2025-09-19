@@ -22,16 +22,41 @@ export function numToTime(num?: number) {
   return `${hour > 0 ? _h + ":" : ""}${_m}:${_s}`;
 }
 
+/**
+ * @param data 图片数据
+ * @param startByte 开始字节
+ * @param endByte 结束字节
+ * @returns
+ */
+function createWorker(data: Uint8ClampedArray) {
+  const worker = new Worker(
+    new URL("../workers/image-pixel-color.worker.ts", import.meta.url)
+  );
+
+  worker.postMessage({ data });
+  return new Promise<string>((resolve) => {
+    worker.onmessage = (e) => {
+      const { colors } = e.data;
+      resolve(colors as string);
+      worker.terminate();
+    };
+    worker.onerror = (_e) => {
+      resolve("");
+      worker.terminate();
+    };
+  });
+}
+
 /** 获取区域图片主颜色 */
 export async function getImgColor(
   imgUrl: string,
   imgRegion?: { x: number; y: number; width: number; height: number }
-): Promise<string[]> {
+): Promise<string> {
   const box_height = 330;
   const box_width = 330;
 
-  if (!imgUrl) return Promise.reject([]);
-  return new Promise((resolve, reject) => {
+  if (!imgUrl) return Promise.reject("");
+  return new Promise<string>((resolve, reject) => {
     const image = new Image();
     image.crossOrigin = "Anonymous";
     image.src = imgUrl;
@@ -69,22 +94,17 @@ export async function getImgColor(
         canvas.width,
         canvas.height
       );
-
-      const worker = new Worker(
-        new URL("../workers/image-pixel-color.worker.ts", import.meta.url)
-      );
       const data = ctx?.getImageData(0, 0, canvas.width, canvas.height);
-      // 获取图片上所有 像素 颜色
-      worker.postMessage({ data });
 
-      worker.onmessage = (e) => {
-        const { colors } = e.data;
-        resolve(colors as string[]);
-      };
+      const time = Date.now();
+      createWorker(data!.data).then((res) => {
+        resolve(res);
+        console.log("getImgColor: ", Date.now() - time, "ms");
+      });
     };
 
     image.onerror = () => {
-      reject([]);
+      reject("");
     };
   });
 }

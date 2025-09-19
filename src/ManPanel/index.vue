@@ -45,13 +45,14 @@
 </template>
 
 <script setup lang="ts">
-import { defineAsyncComponent } from "vue"
+import { defineAsyncComponent, nextTick, watch } from "vue"
 import { useSettingStore } from "@/store/module/setting"
 import { useSongStore } from "@/store/module/song"
-import { computed, ref, watchPostEffect } from "vue";
+import { computed, ref } from "vue";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useMessage, useLoadingBar } from "naive-ui";
 import { window as tauriWindow } from "@tauri-apps/api";
+import { isEqual } from "lodash-es";
 
 const Control = defineAsyncComponent(() => import("./Control.vue"));
 const LyricPanel = defineAsyncComponent(() => import("./LyricPanel.vue"))
@@ -77,17 +78,25 @@ function minWindow() {
   tauriWindow.getCurrentWindow().minimize();
 }
 
-
-watchPostEffect(async () => {
-  if (songStore.currSongKey && songStore.localList) {
+watch(() => songStore.currSongKey, () => {
+  if (songStore.currSongKey) {
     songStore.getSong(songStore.currSongKey).then(res => {
-      song.value = res as LocalMp3FileInfo
-      settingStore.setMainColor(song.value?.img)
+      if (!isEqual(res, song.value)) {
+        settingStore.setMainColor(res?.img)?.then(
+          () => {
+            nextTick(() => {
+              song.value = res as LocalMp3FileInfo
+            })
+          }
+        )
+      }
     })
   } else {
     song.value = null
     settingStore.setMainColor('')
   }
+}, {
+  immediate: true
 })
 
 const app = getCurrentWindow();

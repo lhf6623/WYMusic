@@ -80,8 +80,13 @@ export const useSettingStore = defineStore("setting", {
         return;
       }
       // 耗时任务，不要同步代码
-      return getImgColor(url).then((_color) => {
-        this.color = _color[0] ?? "rgb(255, 255, 255)";
+      return getImgColor(url, {
+        width: 330,
+        height: 330,
+        x: 0,
+        y: 0,
+      }).then((_color) => {
+        this.color = !_color ? "rgb(255, 255, 255)" : _color;
       });
     },
   },
