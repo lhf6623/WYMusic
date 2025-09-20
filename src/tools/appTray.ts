@@ -63,18 +63,15 @@ export async function createAppTray() {
       ];
       if (excludeTypes.includes(event.type)) return;
 
-      const isVisible = await app.isVisible();
-
       if (event.type === "Click" && event.button === "Left") {
-        if (!isVisible) {
-          app.show();
-          app.setFocus();
-        }
+        app.show();
+        app.setFocus();
         return;
       }
 
       // 悬停时更新菜单
       if (event.type === "Enter") {
+        const isVisible = await app.isVisible();
         const newMenu = await createMenu(!isVisible);
         tray.setMenu(newMenu);
       }
